@@ -1,0 +1,38 @@
+{
+  "kind": "singleType",
+  "collectionName": "homes",
+  "info": {
+    "singularName": "home",
+    "pluralName": "homes",
+    "displayName": "Home",
+    "description": "Home page content management"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "HeroHeadline": {
+      "type": "string",
+      "required": true
+    },
+    "HeroSubtitle": {
+      "type": "string"
+    },
+    "HeroImages": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "WhatsAppNumber": {
+      "type": "string"
+    },
+    "Address": {
+      "type": "string"
+    },
+    "ContactPhones": {
+      "type": "string"
+    }
+  }
+}

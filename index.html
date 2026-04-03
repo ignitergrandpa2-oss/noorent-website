@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOORENTERPRISES | Premium IT & POS Solutions</title>
+    <meta name="description" content="NoorEnterprises provides high-end IT and POS hardware solutions, repair services, and technical support in Sahiwal.">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-theme="dark">
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="#" class="logo-container">
+                <span class="logo-text" id="business-name">NOORENTERPRISES</span>
+                <span class="logo-slogan" id="business-slogan">Digital Shepherd - Technology Trading</span>
+            </a>
+
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <nav class="desktop-nav" id="desktop-nav">
+                <a href="#home">Home</a>
+                <a href="#products">Products</a>
+                <a href="#services">Services</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="search-input" id="search-input" placeholder="Search products...">
+                    <div class="search-results" id="search-results"></div>
+                </div>
+
+                <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                <a href="#" class="btn btn-whatsapp" id="nav-whatsapp" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Chat Now
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section id="home" class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <div class="hero-content">
+                <h1 id="hero-headline">Modern IT & POS Solutions</h1>
+                <p id="hero-subtitle">Empowering your business with top-tier technology.</p>
+                <div class="hero-buttons">
+                    <a href="#products" class="btn btn-primary">View Products <i class="fas fa-arrow-right"></i></a>
+                    <a href="#contact" class="btn btn-outline">Contact Us</a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img id="hero-main-img"
+                    src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                    alt="POS System Setup" style="opacity: 0.8;">
+            </div>
+        </div>
+    </section>
+
+    <!-- Products -->
+    <section id="products" class="products">
+        <div class="container">
+            <div class="section-title">
+                <h2>Our <span class="gradient-text">Products</span></h2>
+                <p>High-quality tech solutions for your business needs.</p>
+            </div>
+
+            <div class="products-filter" id="products-filter">
+                <!-- Filters loaded dynamically -->
+                <button class="filter-btn active" data-filter="all">All Products</button>
+            </div>
+
+            <div class="products-grid" id="products-grid">
+                <!-- Products dynamically loaded here via main.js -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Services -->
+    <section id="services" class="services">
+        <div class="container">
+            <div class="section-title">
+                <h2>Professional <span class="gradient-text">Services</span></h2>
+                <p>Comprehensive support, repair, and installation.</p>
+            </div>
+            <div class="services-grid" id="services-grid">
+                <!-- Services dynamically loaded here via main.js -->
+            </div>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-image">
+                <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                    alt="Tech Team" style="opacity: 0.8;">
+            </div>
+            <div class="about-content">
+                <h2>Why Choose <span class="gradient-text" id="about-business-name">NOORENTERPRISES</span>?</h2>
+                <p>We are dedicated to providing the best IT and POS solutions tailored for modern businesses. From
+                    thermal printers to complete retail setups, we ensure your operations run smoothly.</p>
+                <p>With years of experience in hardware repair, network setup, and business hardware supply, we've
+                    become the trusted technology partner for countless businesses in Sahiwal and beyond.</p>
+
+                <div class="about-features">
+                    <div class="about-feature">
+                        <i class="fas fa-check-circle"></i> Premium Quality
+                    </div>
+                    <div class="about-feature">
+                        <i class="fas fa-check-circle"></i> Expert Setup
+                    </div>
+                    <div class="about-feature">
+                        <i class="fas fa-check-circle"></i> Fast Support
+                    </div>
+                    <div class="about-feature">
+                        <i class="fas fa-check-circle"></i> Trusted Brands
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-title">
+                <h2>Get In <span class="gradient-text">Touch</span></h2>
+                <p>Ready to upgrade your business technology? Contact us today.</p>
+            </div>
+
+                <div class="contact-map">
+                    <!-- Google Maps Embed for Sahiwal -->
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d109157.06014457787!2d73.04505874251717!3d30.666687843849924!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3922b7a3a890a943%3A0x67db8a91c1af2e3c!2sSahiwal%2C%20Punjab%2C%20Pakistan!5e0!3m2!1sen!2s!4v1700000000000!5m2!1sen!2s"
+                        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+
+            <!-- Lead Capture Card -->
+            <div class="callback-card" style="margin-top: 4rem; background: var(--card-bg); padding: 3rem; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 2rem; align-items: center; justify-content: space-between;">
+                <div class="callback-info" style="flex: 1; min-width: 300px;">
+                    <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">Request a Call Back</h3>
+                    <p style="color: var(--text-muted);">Leave your details and our expert team will get in touch with you shortly.</p>
+                </div>
+                <form id="lead-form" style="flex: 1; min-width: 300px; display: flex; gap: 1rem;">
+                    <input type="text" id="lead-name" placeholder="Your Name" required style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 0.8rem 1.2rem; border-radius: 8px; color: white;">
+                    <input type="tel" id="lead-phone" placeholder="Phone Number" required style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 0.8rem 1.2rem; border-radius: 8px; color: white;">
+                    <button type="submit" class="btn btn-primary">Get a Call</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; <span id="current-year"></span> <span id="footer-business-name">NOORENTERPRISES</span>. All rights
+                reserved.</p>
+            <p style="margin-top: 10px; font-size: 0.8rem; color: var(--border);">
+                <a href="admin.html" style="opacity: 0.5;">Admin Login</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Quick View Modal -->
+    <div id="qv-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="qv-close"><i class="fas fa-times"></i></button>
+            <div class="qv-grid">
+                <div class="qv-image">
+                    <img id="qv-img" src="" alt="">
+                </div>
+                <div class="qv-info">
+                    <div class="qv-brand" id="qv-brand"></div>
+                    <h2 class="qv-title" id="qv-name"></h2>
+                    <div class="qv-model" id="qv-model"></div>
+                    <div class="qv-desc" id="qv-desc"></div>
+                    
+                    <div class="qv-meta">
+                        <div class="meta-item">
+                            <h5>Warranty</h5>
+                            <p id="qv-warranty"></p>
+                        </div>
+                        <div class="meta-item">
+                            <h5>Status</h5>
+                            <p id="qv-status"></p>
+                        </div>
+                    </div>
+
+                    <div class="qv-footer">
+                        <div class="qv-price" id="qv-price"></div>
+                        <a href="#" class="btn btn-primary" id="qv-wa-btn" target="_blank">
+                            <i class="fab fa-whatsapp"></i> Inquire via WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

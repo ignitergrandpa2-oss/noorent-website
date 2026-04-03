@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "products",
+  "info": {
+    "singularName": "product",
+    "pluralName": "products",
+    "displayName": "Product",
+    "description": "Inventory products for IT and POS"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Name": {
+      "type": "string",
+      "required": true
+    },
+    "Category": {
+      "type": "enumeration",
+      "enum": [
+        "POS",
+        "Printers",
+        "Scanners",
+        "Laptops",
+        "Accessories"
+      ],
+      "required": true
+    },
+    "Brand": {
+      "type": "string"
+    },
+    "ModelNumber": {
+      "type": "string"
+    },
+    "Price": {
+      "type": "decimal"
+    },
+    "InStock": {
+      "type": "boolean",
+      "default": true
+    },
+    "Images": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "Specifications": {
+      "type": "blocks"
+    }
+  }
+}

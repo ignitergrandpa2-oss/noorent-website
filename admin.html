@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | NOORENTERPRISES</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css"> <!-- Base styles -->
+    <link rel="stylesheet" href="css/admin.css"> <!-- Admin specific styles -->
+</head>
+<body>
+
+    <!-- Login Auth Gate -->
+    <div id="login-container" class="admin-auth-container">
+        <div class="auth-box">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <i class="fas fa-lock" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
+                <h2>Admin Access</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Default password is: admin</p>
+            </div>
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required placeholder="admin@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="Enter admin password">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login <i class="fas fa-sign-in-alt"></i></button>
+            </form>
+            <p id="auth-error" class="error-msg" style="display: none;"></p>
+        </div>
+    </div>
+
+    <!-- Admin Wrapper -->
+    <div id="admin-wrapper" class="admin-wrapper" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-brand">
+                <h2>Noor.Ent<span> Admin</span></h2>
+            </div>
+            <ul class="admin-nav">
+                <li><a href="#" class="active" data-tab="tab-dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#" data-tab="tab-products"><i class="fas fa-box"></i> Products</a></li>
+                <li><a href="#" data-tab="tab-settings"><i class="fas fa-cog"></i> Site Settings</a></li>
+                <li><a href="#" data-tab="tab-backup"><i class="fas fa-database"></i> Backup / Restore</a></li>
+            </ul>
+            <div style="padding: 1.5rem;">
+                <button id="btn-logout" class="btn btn-outline" style="width: 100%;">Logout</button>
+                <a href="index.html" class="btn" style="width: 100%; margin-top: 10px; background: var(--card-bg); color: #fff;">View Site</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <h2>Dashboard Overview</h2>
+                <div id="save-toast" class="toast">Changes saved successfully!</div>
+            </header>
+
+            <div class="admin-content">
+                
+                <!-- Tab: Dashboard Overview -->
+                <div id="tab-dashboard" class="tab-content active">
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-box"></i></div>
+                            <div class="stat-info">
+                                <h3 id="stat-total-products">0</h3>
+                                <p>Total Products</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="color: var(--success);"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-info">
+                                <h3 id="stat-instock">0</h3>
+                                <p>In Stock</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="welcome-banner">
+                        <i class="fas fa-info-circle" style="color: var(--accent); font-size: 1.5rem;"></i>
+                        <div>
+                            <h4>Welcome to your Admin Dashboard</h4>
+                            <p>Here you can manage your products, update prices, and edit contact information without touching code. Remember to <strong>export a backup</strong> periodically from the Backup tab.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Products -->
+                <div id="tab-products" class="tab-content">
+                    <div class="flex-between admin-action-bar" style="margin-bottom: 1.5rem;">
+                        <h3>Manage Products</h3>
+                        <div class="header-actions-group">
+                            <select id="admin-category-filter" class="admin-select">
+                                <option value="all">All Categories</option>
+                            </select>
+                            <button class="btn btn-outline" id="btn-manage-categories"><i class="fas fa-tags"></i> Categories</button>
+                            <button class="btn btn-primary" id="btn-add-product"><i class="fas fa-plus"></i> Add Product</button>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-products-list">
+                                <!-- Products mapped here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Settings -->
+                <div id="tab-settings" class="tab-content">
+                    <h3>Site Text & Contact Settings</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Update business details shown on the website.</p>
+
+                    <form id="settings-form" class="settings-grid">
+                        <div class="form-section">
+                            <h4>Business Info</h4>
+                            <div class="form-group">
+                                <label>Business Name</label>
+                                <input type="text" id="set-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Slogan</label>
+                                <input type="text" id="set-slogan">
+                            </div>
+                            <div class="form-group">
+                                <label>Hero Headline</label>
+                                <input type="text" id="set-hero-headline">
+                            </div>
+                            <div class="form-group">
+                                <label>Hero Subtitle</label>
+                                <input type="text" id="set-hero-subtitle">
+                            </div>
+                            <div class="form-group">
+                                <label>Hero Image URL</label>
+                                <input type="text" id="set-hero-image">
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>Contact & Socials</h4>
+                            <div class="form-group">
+                                <label>WhatsApp Number (e.g. +923216916909)</label>
+                                <input type="text" id="set-whatsapp" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Numbers (comma separated)</label>
+                                <input type="text" id="set-phones" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Address</label>
+                                <input type="text" id="set-address">
+                            </div>
+                            <div class="form-group">
+                                <label>Facebook Profile URL</label>
+                                <input type="url" id="set-facebook">
+                            </div>
+                            <div class="form-group">
+                                <label>Instagram Profile URL</label>
+                                <input type="url" id="set-instagram">
+                            </div>
+                        </div>
+                        
+                        <div class="form-section" style="grid-column: 1 / -1; border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1.5rem;">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Site Settings</button>
+                        </div>
+                    </form>
+
+                    <h3 style="margin-top: 3rem;">Security & Account</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Update your admin login password.</p>
+                    <form id="password-form" class="settings-grid" style="max-width: 500px;">
+                        <div class="form-section" style="width: 100%;">
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="new-password" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New Password</label>
+                                <input type="password" id="confirm-password" required minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-outline" style="width: 100%; border-color: var(--accent); color: var(--accent);">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Backup -->
+                <div id="tab-backup" class="tab-content">
+                    <h3>Data Management</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Since this site uses local storage, your data is saved in THIS browser. Use these buttons to backup or restore your data, or move it to a different device.</p>
+                    
+                    <div class="stat-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="service-card" style="text-align: left; padding: 2rem;">
+                            <h4><i class="fas fa-download" style="color: var(--success);"></i> Backup Data</h4>
+                            <p style="margin: 1rem 0; color: var(--text-muted);">Download all settings, products, and services as a JSON file to your computer.</p>
+                            <button id="btn-export" class="btn btn-primary">Export Data File</button>
+                        </div>
+                        <div class="service-card" style="text-align: left; padding: 2rem;">
+                            <h4><i class="fas fa-upload" style="color: var(--warning);"></i> Restore Data</h4>
+                            <p style="margin: 1rem 0; color: var(--text-muted);">Import a previously exported JSON file. <strong>Warning:</strong> This overrides current data.</p>
+                            <input type="file" id="import-file" accept=".json" style="display: none;">
+                            <button id="btn-import-trigger" class="btn btn-outline">Select File to Import</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="modal-title" style="margin-bottom: 1.5rem;">Add/Edit Product</h3>
+            <form id="product-form">
+                <input type="hidden" id="prod-id">
+                <div class="form-group">
+                    <label>Product Name <span style="color: var(--accent);">*</span></label>
+                    <input type="text" id="prod-name" required>
+                </div>
+                
+                <div class="form-section-grid">
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <input type="text" id="prod-brand" placeholder="E.g. HP, Xprinter">
+                    </div>
+                    <div class="form-group">
+                        <label>Model Number</label>
+                        <input type="text" id="prod-model" placeholder="E.g. XP-420B">
+                    </div>
+                </div>
+
+                <div class="form-section-grid">
+                    <div class="form-group">
+                        <label>Category <span style="color: var(--accent);">*</span></label>
+                        <input type="text" id="prod-category" placeholder="E.g. POS, Printers..." required list="category-list">
+                        <datalist id="category-list">
+                            <!-- Dynamically populated from JS -->
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="text" id="prod-price" placeholder="E.g. Rs 25,000">
+                    </div>
+                </div>
+                
+                <div class="form-group checkbox-group" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                    <input type="checkbox" id="prod-show-price" style="width: auto;">
+                    <label for="prod-show-price" style="margin: 0; cursor: pointer;">Show price publicly?</label>
+                </div>
+
+                <div class="form-section-grid">
+                    <div class="form-group">
+                        <label>Warranty Period</label>
+                        <input type="text" id="prod-warranty" placeholder="E.g. 1 Year, 6 Months">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock Status</label>
+                        <select id="prod-stock">
+                            <option value="In Stock">In Stock</option>
+                            <option value="Out of Stock">Out of Stock</option>
+                            <option value="Coming Soon">Coming Soon</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description (Technical Specs)</label>
+                    <textarea id="prod-desc" rows="4" placeholder="Enter product details. Use bullet points for technical specs." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="text" id="prod-image" placeholder="Leave blank for placeholder box">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 style="margin-bottom: 1.5rem;">Manage Categories</h3>
+            <form id="category-form" style="margin-bottom: 2rem; display: flex; gap: 0.5rem;">
+                <input type="text" id="new-category-name" placeholder="New Category Name" required style="flex: 1;">
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+            <div id="category-list-container">
+                <ul id="admin-category-list-items" class="manage-list">
+                    <!-- Categories mapped here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>
