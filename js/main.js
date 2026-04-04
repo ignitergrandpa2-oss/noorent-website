@@ -93,7 +93,7 @@ function setupLeadForm() {
                 submitBtn.textContent = 'Sending...';
                 
                 const { addLead } = await import('./data.js');
-                await addLead({ Name: name, PhoneNumber: phone });
+                await addLead({ name: name, phone_number: phone });
                 
                 alert('Thank you! We will call you back shortly.');
                 leadForm.reset();

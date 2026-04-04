@@ -1,10 +1,4 @@
-import { auth, db } from './firebase-config.js';
-import { 
-    onAuthStateChanged, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    updatePassword 
-} from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { supabase } from './supabase-config.js';
 import { 
     getBusinessInfo, 
     updateBusinessInfo, 
@@ -29,9 +23,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authForm = document.getElementById('auth-form');
     const authError = document.getElementById('auth-error');
 
-    // --- Monitor Auth State ---
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
+    // --- Monitor Auth State (Supabase) ---
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session) {
             showDashboard();
             // Check for legacy data migration
             if (localStorage.getItem('noor_website_data')) {
@@ -48,16 +42,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pass = document.getElementById('login-password').value;
         
         try {
-            await signInWithEmailAndPassword(auth, email, pass);
+            const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+            if (error) throw error;
             authError.style.display = 'none';
         } catch (error) {
-            authError.textContent = 'Invalid login credentials';
+            authError.textContent = 'Invalid login: ' + error.message;
             authError.style.display = 'block';
         }
     });
 
-    document.getElementById('btn-logout').addEventListener('click', () => {
-        signOut(auth);
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+        await supabase.auth.signOut();
     });
 
     function showDashboard() {
@@ -84,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.currentTarget.classList.add('active');
             const targetId = e.currentTarget.getAttribute('data-tab');
             document.getElementById(targetId).classList.add('active');
+            
+            // Update header title
+            document.querySelector('.admin-header h2').textContent = e.currentTarget.textContent.trim();
         });
     });
 
@@ -132,8 +130,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function showToast() {
+    function showToast(msg = "Changes saved successfully!") {
         const toast = document.getElementById('save-toast');
+        toast.textContent = msg;
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
@@ -141,6 +140,114 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateStats() {
         document.getElementById('stat-total-products').textContent = productsList.length;
         document.getElementById('stat-instock').textContent = productsList.filter(p => p.availability).length;
+    }
+
+    // --- Image Handling & Optimization ---
+    
+    /**
+     * Compresses image using Canvas API
+     */
+    async function compressImage(file, { maxWidth = 1200, quality = 0.75 }) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = (maxWidth / width) * height;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', quality);
+                };
+            };
+        });
+    }
+
+    /**
+     * Handles file input change, compresses and uploads to Supabase
+     */
+    async function handleFileUpload(file, progressId, previewId, hiddenInputId, folder = 'products') {
+        if (!file) return;
+
+        const progressContainer = document.getElementById(progressId);
+        const progressBar = progressContainer.querySelector('.upload-progress-bar');
+        const previewContainer = document.getElementById(previewId);
+        const hiddenInput = document.getElementById(hiddenInputId);
+
+        try {
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+
+            // 1. Compress Image
+            const compressedBlob = await compressImage(file, { maxWidth: 1200, quality: 0.75 });
+            progressBar.style.width = '30%';
+
+            // 2. Upload to Supabase Storage
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const filePath = `${folder}/${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('noorent-assets') // Ensure this bucket exists or change name
+                .upload(filePath, compressedBlob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            progressBar.style.width = '70%';
+
+            // 3. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('noorent-assets')
+                .getPublicUrl(filePath);
+
+            progressBar.style.width = '100%';
+            
+            // 4. Update UI
+            hiddenInput.value = publicUrl;
+            previewContainer.innerHTML = `<img src="${publicUrl}" alt="Preview">`;
+            
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+            }, 1000);
+
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Upload failed: " + error.message);
+            progressContainer.style.display = 'none';
+        }
+    }
+
+    // Bind Product Image Upload
+    const prodImageFile = document.getElementById('prod-image-file');
+    if (prodImageFile) {
+        prodImageFile.addEventListener('change', (e) => {
+            handleFileUpload(e.target.files[0], 'prod-upload-progress', 'prod-preview-container', 'prod-image', 'products');
+        });
+    }
+
+    // Bind Hero Image Upload
+    const heroImageFile = document.getElementById('set-hero-image-file');
+    if (heroImageFile) {
+        heroImageFile.addEventListener('change', (e) => {
+            handleFileUpload(e.target.files[0], 'hero-upload-progress', 'hero-preview-container', 'set-hero-image', 'site');
+        });
     }
 
     // --- Category Management ---
@@ -163,7 +270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderCategoryList();
             updateCategoryFilter();
             nameInput.value = '';
-            showToast();
+            showToast("Category added!");
         } else if (categoriesList.includes(name)) {
             alert("Category already exists!");
         }
@@ -185,22 +292,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         list.querySelectorAll('.delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const catToDelete = e.currentTarget.getAttribute('data-cat');
-                if (confirm(`Delete category "${catToDelete}"? Existing products in this category will be moved to "General".`)) {
+                if (confirm(`Delete category "${catToDelete}"?`)) {
                     categoriesList = categoriesList.filter(c => c !== catToDelete);
-                    if (!categoriesList.includes('General')) categoriesList.push('General');
-                    
                     await updateCategories(categoriesList);
-                    
-                    // Update products locally (Firestore triggers will handle re-render)
-                    for (const p of productsList) {
-                        if (p.category === catToDelete) {
-                            await updateProduct(p.id, { category: 'General' });
-                        }
-                    }
-                    
                     renderCategoryList();
                     updateCategoryFilter();
-                    showToast();
+                    showToast("Category removed");
                 }
             });
         });
@@ -223,11 +320,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const imgHtml = p.image && p.image.trim() !== '' 
                 ? `<img src="${p.image}" class="product-thumb">` 
-                : `<div class="product-thumb"><i class="fas fa-box" style="font-size: 1.5rem; color: var(--border);"></i></div>`;
+                : `<div class="product-thumb"><i class="fas fa-box"></i></div>`;
             
             const stockStatus = p.stockStatus || (p.availability ? "In Stock" : "Out of Stock");
             const stockColor = stockStatus === 'In Stock' ? 'var(--success)' : (stockStatus === 'Coming Soon' ? 'var(--warning)' : '#ef4444');
-            const stockBadge = `<span style="color: ${stockColor};"><i class="fas fa-circle" style="font-size: 0.6rem; vertical-align: middle; margin-right: 4px;"></i> ${stockStatus}</span>`;
+            const stockBadge = `<span style="color: ${stockColor}; font-size: 0.85rem;"><i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle; margin-right: 4px;"></i> ${stockStatus}</span>`;
 
             tr.innerHTML = `
                 <td>${imgHtml}</td>
@@ -247,15 +344,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Bind Action Buttons
-        document.querySelectorAll('.action-btn.edit').forEach(btn => {
+        tbody.querySelectorAll('.action-btn.edit').forEach(btn => {
             btn.addEventListener('click', (e) => openProductModal(e.currentTarget.getAttribute('data-id')));
         });
-        document.querySelectorAll('.action-btn.delete').forEach(btn => {
+        tbody.querySelectorAll('.action-btn.delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
                 if (confirm("Are you sure you want to delete this product?")) {
                     await deleteProduct(id);
-                    showToast();
+                    showToast("Product deleted");
                 }
             });
         });
@@ -290,6 +387,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentEditId = id;
         productForm.reset();
         
+        // Reset image preview
+        document.getElementById('prod-preview-container').innerHTML = '<i class="fas fa-camera"></i>';
+        document.getElementById('prod-image').value = '';
+        
         if (id) {
             document.getElementById('modal-title').textContent = 'Edit Product';
             const p = productsList.find(x => x.id === id);
@@ -304,11 +405,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('prod-warranty').value = p.warranty || '';
                 document.getElementById('prod-desc').value = p.description;
                 document.getElementById('prod-image').value = p.image || '';
-                document.getElementById('prod-stock').value = p.stockStatus || (p.availability ? "In Stock" : "Out of Stock");
+                document.getElementById('prod-stock').value = p.stockStatus || "In Stock";
+                
+                if (p.image) {
+                    document.getElementById('prod-preview-container').innerHTML = `<img src="${p.image}" alt="Preview">`;
+                }
             }
         } else {
             document.getElementById('modal-title').textContent = 'Add New Product';
-            document.getElementById('prod-stock').value = 'true';
+            document.getElementById('prod-stock').value = 'In Stock';
             document.getElementById('prod-show-price').checked = true;
         }
         
@@ -334,18 +439,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             showPrice: document.getElementById('prod-show-price').checked,
             warranty: document.getElementById('prod-warranty').value.trim(),
             description: document.getElementById('prod-desc').value.trim(),
-            image: document.getElementById('prod-image').value.trim(),
+            image: document.getElementById('prod-image').value,
             stockStatus: document.getElementById('prod-stock').value
         };
 
-        if (currentEditId) {
-            await updateProduct(currentEditId, productData);
-        } else {
-            await addProduct(productData);
+        try {
+            if (currentEditId) {
+                await updateProduct(currentEditId, productData);
+            } else {
+                await addProduct(productData);
+            }
+            modal.classList.remove('active');
+            showToast("Product saved successfully!");
+        } catch (error) {
+            alert("Error saving product: " + error.message);
         }
-
-        modal.classList.remove('active');
-        showToast();
     });
 
     // --- Settings Management ---
@@ -355,8 +463,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('set-slogan').value = b.slogan;
         document.getElementById('set-hero-headline').value = b.heroHeadline;
         document.getElementById('set-hero-subtitle').value = b.heroSubtitle;
-        const heroImgInput = document.getElementById('set-hero-image');
-        if(heroImgInput) heroImgInput.value = b.heroImage || '';
+        document.getElementById('set-hero-image').value = b.heroImage || '';
+        
+        if (b.heroImage) {
+            document.getElementById('hero-preview-container').innerHTML = `<img src="${b.heroImage}" alt="Preview">`;
+        } else {
+            document.getElementById('hero-preview-container').innerHTML = '<i class="fas fa-image"></i>';
+        }
+        
         document.getElementById('set-whatsapp').value = b.whatsapp;
         document.getElementById('set-phones').value = b.phones.join(', ');
         document.getElementById('set-address').value = b.address;
@@ -372,7 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             slogan: document.getElementById('set-slogan').value.trim(),
             heroHeadline: document.getElementById('set-hero-headline').value.trim(),
             heroSubtitle: document.getElementById('set-hero-subtitle').value.trim(),
-            heroImage: document.getElementById('set-hero-image') ? document.getElementById('set-hero-image').value.trim() : '',
+            heroImage: document.getElementById('set-hero-image').value,
             whatsapp: document.getElementById('set-whatsapp').value.trim(),
             phones: document.getElementById('set-phones').value.split(',').map(s => s.trim()),
             address: document.getElementById('set-address').value.trim(),
@@ -380,8 +494,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             instagram: document.getElementById('set-instagram').value.trim()
         };
 
-        await updateBusinessInfo(businessData);
-        showToast();
+        try {
+            await updateBusinessInfo(businessData);
+            showToast("Settings updated!");
+        } catch (error) {
+            alert("Error updating settings: " + error.message);
+        }
     });
 
     // --- Security Management ---
@@ -398,16 +516,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                const user = auth.currentUser;
-                await updatePassword(user, newPass);
+                const { error } = await supabase.auth.updateUser({ password: newPass });
+                if (error) throw error;
                 alert("Password updated successfully!");
                 passwordForm.reset();
             } catch (error) {
-                if (error.code === 'auth/requires-recent-login') {
-                    alert("For security reasons, please log out and log back in before changing your password.");
-                } else {
-                    alert("Error updating password: " + error.message);
-                }
+                alert("Error updating password: " + error.message);
             }
         });
     }
@@ -415,7 +529,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Export / Backup ---
     document.getElementById('btn-export').addEventListener('click', () => {
         const fullData = {
-            business: {}, // Could fetch on the fly
             products: productsList,
             categories: categoriesList
         };

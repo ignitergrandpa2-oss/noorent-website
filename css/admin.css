@@ -367,3 +367,94 @@ body {
     align-items: center;
     flex-wrap: wrap;
 }
+/* Image Upload & Previews */
+.image-upload-wrapper {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-top: 0.5rem;
+}
+
+.image-preview-container {
+    width: 120px;
+    height: 120px;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--card-bg);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.image-preview-container:hover {
+    border-color: var(--accent);
+}
+
+.image-preview-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-preview-container i {
+    font-size: 2rem;
+    color: var(--text-muted);
+}
+
+.file-input-group {
+    flex: 1;
+}
+
+.custom-file-upload {
+    display: inline-block;
+    padding: 0.8rem 1.2rem;
+    cursor: pointer;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    width: 100%;
+    text-align: center;
+}
+
+.custom-file-upload:hover {
+    background: rgba(79, 142, 247, 0.1);
+    border-color: var(--accent);
+}
+
+.custom-file-upload i {
+    margin-right: 0.5rem;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.upload-progress-container {
+    margin-top: 0.5rem;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.image-meta-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
