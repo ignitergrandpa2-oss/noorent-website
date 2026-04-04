@@ -1,7 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = 'https://juskbhdjagjlyrfiywzk.supabase.co';
-// WARNING: NEVER use sb_secret_* keys in the frontend. Use the "anon" public key instead.
-const supabaseKey = 'YOUR_PUBLIC_ANON_KEY_HERE';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1c2tiaGRqYWdqbHlyZml5d3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NzMyMTIsImV4cCI6MjA5MDM0OTIxMn0.xHIvbQrNlxPBSo-kDRsif_PwgScX7nn7ikS2TbRVILo';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
