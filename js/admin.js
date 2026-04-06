@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentEditId = null;
     let productsList = [];
     let categoriesList = [];
+    let currentStep = 1;
 
     // --- Auth Elements ---
     const loginContainer = document.getElementById('login-container');
@@ -383,9 +384,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target === categoryModal) categoryModal.classList.remove('active');
     });
 
+    // --- Multi-Step Form Logic ---
+    const btnNext = document.getElementById('btn-next-step');
+    const btnPrev = document.getElementById('btn-prev-step');
+    const btnSave = document.getElementById('btn-save-product');
+    const steps = document.querySelectorAll('.form-step');
+    const indicatorSteps = document.querySelectorAll('.step-indicator .step');
+
+    function goToStep(stepNumber) {
+        currentStep = stepNumber;
+        
+        // Update visibility
+        steps.forEach((s, idx) => {
+            s.classList.toggle('active', idx + 1 === currentStep);
+        });
+
+        // Update indicator
+        indicatorSteps.forEach((s, idx) => {
+            const stepIdx = idx + 1;
+            s.classList.toggle('active', stepIdx === currentStep);
+            s.classList.toggle('completed', stepIdx < currentStep);
+        });
+
+        // Update buttons
+        btnPrev.style.display = currentStep === 1 ? 'none' : 'block';
+        btnNext.style.display = currentStep === 3 ? 'none' : 'block';
+        btnSave.style.display = currentStep === 3 ? 'block' : 'none';
+        
+        // Scroll to top of modal on mobile
+        const modalContent = document.querySelector('.modal-content');
+        if (window.innerWidth <= 600) {
+            modalContent.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function validateStep(step) {
+        if (step === 1) {
+            const name = document.getElementById('prod-name').value.trim();
+            const cat = document.getElementById('prod-category').value.trim();
+            if (!name || !cat) {
+                alert("Please fill in Product Name and Category.");
+                return false;
+            }
+        } else if (step === 3) {
+            const desc = document.getElementById('prod-desc').value.trim();
+            if (!desc) {
+                alert("Please enter a product description.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    btnNext.addEventListener('click', () => {
+        if (validateStep(currentStep)) {
+            goToStep(currentStep + 1);
+        }
+    });
+
+    btnPrev.addEventListener('click', () => {
+        goToStep(currentStep - 1);
+    });
+
     function openProductModal(id = null) {
         currentEditId = id;
         productForm.reset();
+        goToStep(1); // Reset to first step
         
         // Reset image preview
         document.getElementById('prod-preview-container').innerHTML = '<i class="fas fa-camera"></i>';
@@ -423,6 +487,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        if (!validateStep(3)) return; // Extra check on final submit
+
         const cat = document.getElementById('prod-category').value.trim();
         if (cat && !categoriesList.includes(cat)) {
             categoriesList.push(cat);
@@ -444,6 +510,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
             if (currentEditId) {
                 await updateProduct(currentEditId, productData);
             } else {
@@ -453,6 +522,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast("Product saved successfully!");
         } catch (error) {
             alert("Error saving product: " + error.message);
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerHTML = 'Save Product <i class="fas fa-check"></i>';
         }
     });
 

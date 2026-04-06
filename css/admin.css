@@ -307,8 +307,15 @@ body {
 .form-section-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
     margin-bottom: 0.5rem;
+}
+
+@media (max-width: 600px) {
+    .form-section-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
 }
 
 .form-section h4 {
@@ -457,4 +464,146 @@ input[type="file"] {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 0.5rem;
+}
+
+/* --- Multi-Step Form Progress --- */
+.step-indicator {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    position: relative;
+    opacity: 0.4;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step.completed {
+    opacity: 0.8;
+    color: var(--success);
+}
+
+.step span {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 2;
+}
+
+.step.active span {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(79, 142, 247, 0.4);
+}
+
+.step.completed span {
+    border-color: var(--success);
+    background: var(--success);
+    color: #fff;
+}
+
+.step label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    z-index: 1;
+}
+
+.step.completed:not(:last-child)::after {
+    background: var(--success);
+}
+
+/* --- Form Steps Visibility --- */
+.form-step {
+    display: none;
+    animation: slideIn 0.4s ease;
+}
+
+.form-step.active {
+    display: block;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Mobile UI Fixes --- */
+@media (max-width: 600px) {
+    .modal-content {
+        padding: 0;
+        border-radius: 0;
+        height: 100%;
+        max-height: 100%;
+    }
+    
+    .modal {
+        padding: 0;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+        padding: 0.9rem; /* Larger touch targets */
+        font-size: 1rem;
+    }
+
+    .modal-actions {
+        position: sticky;
+        bottom: 0;
+        background: var(--secondary);
+        padding: 1.5rem;
+        margin: 0 !important;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    }
+
+    .image-upload-wrapper {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .image-preview-container {
+        width: 100%;
+        height: 200px;
+    }
+
+    .custom-file-upload {
+        padding: 1rem;
+    }
 }

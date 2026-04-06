@@ -242,26 +242,36 @@
     <div id="product-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h3 id="modal-title" style="margin-bottom: 1.5rem;">Add/Edit Product</h3>
-            <form id="product-form">
-                <input type="hidden" id="prod-id">
-                <div class="form-group">
-                    <label>Product Name <span style="color: var(--accent);">*</span></label>
-                    <input type="text" id="prod-name" required>
-                </div>
-                
-                <div class="form-section-grid">
-                    <div class="form-group">
-                        <label>Brand</label>
-                        <input type="text" id="prod-brand" placeholder="E.g. HP, Xprinter">
-                    </div>
-                    <div class="form-group">
-                        <label>Model Number</label>
-                        <input type="text" id="prod-model" placeholder="E.g. XP-420B">
-                    </div>
-                </div>
+            <h3 id="modal-title" style="margin-bottom: 1rem; padding: 1.5rem 1.5rem 0.5rem;">Add/Edit Product</h3>
+            
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" data-step="1"><span>1</span><label>General</label></div>
+                <div class="step" data-step="2"><span>2</span><label>Pricing</label></div>
+                <div class="step" data-step="3"><span>3</span><label>Media</label></div>
+            </div>
 
-                <div class="form-section-grid">
+            <form id="product-form" style="padding: 0 1.5rem 1.5rem;">
+                <input type="hidden" id="prod-id">
+                
+                <!-- Step 1: Basic Info -->
+                <div class="form-step active" id="step-1">
+                    <div class="form-group">
+                        <label>Product Name <span style="color: var(--accent);">*</span></label>
+                        <input type="text" id="prod-name" required placeholder="Enter product name">
+                    </div>
+                    
+                    <div class="form-section-grid">
+                        <div class="form-group">
+                            <label>Brand</label>
+                            <input type="text" id="prod-brand" placeholder="E.g. HP, Xprinter">
+                        </div>
+                        <div class="form-group">
+                            <label>Model Number</label>
+                            <input type="text" id="prod-model" placeholder="E.g. XP-420B">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Category <span style="color: var(--accent);">*</span></label>
                         <input type="text" id="prod-category" placeholder="E.g. POS, Printers..." required list="category-list">
@@ -269,59 +279,70 @@
                             <!-- Dynamically populated from JS -->
                         </datalist>
                     </div>
-                    <div class="form-group">
-                        <label>Price</label>
-                        <input type="text" id="prod-price" placeholder="E.g. Rs 25,000">
-                    </div>
-                </div>
-                
-                <div class="form-group checkbox-group" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
-                    <input type="checkbox" id="prod-show-price" style="width: auto;">
-                    <label for="prod-show-price" style="margin: 0; cursor: pointer;">Show price publicly?</label>
                 </div>
 
-                <div class="form-section-grid">
+                <!-- Step 2: Pricing & Inventory -->
+                <div class="form-step" id="step-2">
+                    <div class="form-section-grid">
+                        <div class="form-group">
+                            <label>Price / Rate</label>
+                            <input type="text" id="prod-price" placeholder="E.g. Rs 25,000">
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Status</label>
+                            <select id="prod-stock">
+                                <option value="In Stock">In Stock</option>
+                                <option value="Out of Stock">Out of Stock</option>
+                                <option value="Coming Soon">Coming Soon</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <input type="checkbox" id="prod-show-price" style="width: 20px; height: 20px; margin: 0;">
+                        <label for="prod-show-price" style="margin: 0; cursor: pointer; color: var(--text-main); font-weight: 500;">Show price publicly?</label>
+                    </div>
+
                     <div class="form-group">
                         <label>Warranty Period</label>
                         <input type="text" id="prod-warranty" placeholder="E.g. 1 Year, 6 Months">
                     </div>
+                </div>
+
+                <!-- Step 3: Description & Media -->
+                <div class="form-step" id="step-3">
                     <div class="form-group">
-                        <label>Stock Status</label>
-                        <select id="prod-stock">
-                            <option value="In Stock">In Stock</option>
-                            <option value="Out of Stock">Out of Stock</option>
-                            <option value="Coming Soon">Coming Soon</option>
-                        </select>
+                        <label>Description (Technical Specs) <span style="color: var(--accent);">*</span></label>
+                        <textarea id="prod-desc" rows="5" placeholder="Enter product details. Use bullet points or clear lines." required></textarea>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Description (Technical Specs)</label>
-                    <textarea id="prod-desc" rows="4" placeholder="Enter product details. Use bullet points for technical specs." required></textarea>
-                </div>
-                
-                                <div class="form-group">
-                    <label>Product Image <span style="font-size: 0.8rem; color: var(--text-muted);">(Auto-optimized)</span></label>
-                    <div class="image-upload-wrapper">
-                        <div class="image-preview-container" id="prod-preview-container">
-                            <i class="fas fa-camera"></i>
-                        </div>
-                        <div class="file-input-group">
-                            <label for="prod-image-file" class="custom-file-upload">
-                                <i class="fas fa-upload"></i> Select Product Photo
-                            </label>
-                            <input type="file" id="prod-image-file" accept="image/*">
-                            <input type="hidden" id="prod-image">
-                            <div class="upload-progress-container" id="prod-upload-progress">
-                                <div class="upload-progress-bar"></div>
+                    
+                    <div class="form-group">
+                        <label>Product Image <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Auto-optimized)</span></label>
+                        <div class="image-upload-wrapper">
+                            <div class="image-preview-container" id="prod-preview-container">
+                                <i class="fas fa-camera"></i>
                             </div>
-                            <p class="image-meta-info">Recommended: 1200px width for best quality.</p>
+                            <div class="file-input-group">
+                                <label for="prod-image-file" class="custom-file-upload">
+                                    <i class="fas fa-upload"></i> Upload Photo
+                                </label>
+                                <input type="file" id="prod-image-file" accept="image/*">
+                                <input type="hidden" id="prod-image">
+                                <div class="upload-progress-container" id="prod-upload-progress">
+                                    <div class="upload-progress-bar"></div>
+                                </div>
+                                <p class="image-meta-info">Recommended size: 1200px width.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Product</button>
+                <!-- Modal Footer Actions -->
+                <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                    <button type="button" class="btn btn-outline" id="btn-prev-step" style="display: none; flex: 1;">Back</button>
+                    <button type="button" class="btn btn-primary" id="btn-next-step" style="flex: 2;">Next <i class="fas fa-arrow-right"></i></button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-product" style="display: none; flex: 2;">Save Product <i class="fas fa-check"></i></button>
+                </div>
             </form>
         </div>
     </div>
