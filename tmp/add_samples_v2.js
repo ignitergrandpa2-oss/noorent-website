@@ -108,7 +108,7 @@ function postProduct(prod) {
 
 async function addAll() {
     for (const p of products) {
-        await postProduct(p).catch(() => {});
+        await postProduct(p).catch(() => { });
     }
     console.log("Finished adding samples.");
 }

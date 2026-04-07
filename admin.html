@@ -95,6 +95,10 @@
                     <div class="flex-between admin-action-bar" style="margin-bottom: 1.5rem;">
                         <h3>Manage Products</h3>
                         <div class="header-actions-group">
+                            <div class="search-bar-container">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="admin-product-search" placeholder="Search products...">
+                            </div>
                             <select id="admin-category-filter" class="admin-select">
                                 <option value="all">All Categories</option>
                             </select>
@@ -131,12 +135,35 @@
                         <div class="form-section">
                             <h4>Business Info</h4>
                             <div class="form-group">
-                                <label>Business Name</label>
+                                <label>Site Name (Displays in Browser Tab)</label>
                                 <input type="text" id="set-name" required>
                             </div>
                             <div class="form-group">
-                                <label>Slogan</label>
+                                <label>Slogan / Subtitle</label>
                                 <input type="text" id="set-slogan">
+                            </div>
+                            <div class="form-group">
+                                <label>Logo (Square image recommended)</label>
+                                <div class="image-upload-wrapper">
+                                    <div class="image-preview-container" id="logo-preview-container" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-certificate"></i>
+                                    </div>
+                                    <div class="file-input-group">
+                                        <label for="set-logo-file" class="custom-file-upload">Upload Logo</label>
+                                        <input type="file" id="set-logo-file" accept="image/*">
+                                        <input type="hidden" id="set-logo">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-section-grid">
+                                <div class="form-group">
+                                    <label>Primary Theme Color</label>
+                                    <input type="color" id="set-primary-color" value="#4f8ef7">
+                                </div>
+                                <div class="form-group">
+                                    <label>Secondary / BG Color</label>
+                                    <input type="color" id="set-secondary-color" value="#050818">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Hero Headline</label>
@@ -279,6 +306,11 @@
                             <!-- Dynamically populated from JS -->
                         </datalist>
                     </div>
+
+                    <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <input type="checkbox" id="prod-homepage" checked style="width: 20px; height: 20px; margin: 0;">
+                        <label for="prod-homepage" style="margin: 0; cursor: pointer; color: var(--text-main); font-weight: 500;">Show on Homepage?</label>
+                    </div>
                 </div>
 
                 <!-- Step 2: Pricing & Inventory -->
@@ -317,23 +349,19 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Product Image <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Auto-optimized)</span></label>
-                        <div class="image-upload-wrapper">
-                            <div class="image-preview-container" id="prod-preview-container">
-                                <i class="fas fa-camera"></i>
-                            </div>
-                            <div class="file-input-group">
-                                <label for="prod-image-file" class="custom-file-upload">
-                                    <i class="fas fa-upload"></i> Upload Photo
-                                </label>
-                                <input type="file" id="prod-image-file" accept="image/*">
-                                <input type="hidden" id="prod-image">
-                                <div class="upload-progress-container" id="prod-upload-progress">
-                                    <div class="upload-progress-bar"></div>
-                                </div>
-                                <p class="image-meta-info">Recommended size: 1200px width.</p>
+                        <label>Product Images <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(First image is primary)</span></label>
+                        <div class="multi-upload-container" id="multi-image-list">
+                            <!-- Image slots here -->
+                            <div class="image-slot add-slot" id="btn-add-image-slot">
+                                <i class="fas fa-plus"></i>
+                                <p>Add Image</p>
                             </div>
                         </div>
+                        <button type="button" class="btn btn-outline btn-sm" id="btn-open-gallery" style="margin-top: 1rem; width: 100%;">
+                            <i class="fas fa-images"></i> Select from Gallery Picker
+                        </button>
+                        <input type="file" id="multi-image-input" accept="image/*" multiple style="display: none;">
+                        <input type="hidden" id="prod-images-json">
                     </div>
                 </div>
 
@@ -364,7 +392,24 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Gallery Modal -->
+    <div id="gallery-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close-modal">&times;</span>
+            <h3 style="margin-bottom: 1.5rem;">Image Gallery Picker</h3>
+            <div class="gallery-grid" id="gallery-grid">
+                <!-- Images from storage mapped here -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Loading gallery images...</p>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-primary" id="btn-confirm-gallery-selection">Insert Selection</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>

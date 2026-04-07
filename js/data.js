@@ -1,11 +1,18 @@
 import { supabase } from './supabase-config.js';
 
+// --- Local Cache ---
+let productsCache = [];
+let categoriesCache = [];
+let businessInfoCache = null;
+
 // --- DB Operations (Supabase) ---
 
 /**
  * Fetches Business Info (Settings) from Supabase
  */
-export async function getBusinessInfo() {
+export async function getBusinessInfo(forceRefresh = false) {
+    if (businessInfoCache && !forceRefresh) return businessInfoCache;
+    
     try {
         const { data, error } = await supabase
             .from('settings')
@@ -14,13 +21,13 @@ export async function getBusinessInfo() {
             
         if (error) {
             if (error.code === 'PGRST116') {
-                // Table is empty or doesn't exist, return default
-                return getDefaultBusinessInfo();
+                businessInfoCache = getDefaultBusinessInfo();
+                return businessInfoCache;
             }
             throw error;
         }
         
-        return {
+        businessInfoCache = {
             name: data.name || "NOORENTERPRISES (Noor.Ent)",
             slogan: data.slogan || "Digital Shepherd - Technology Trading",
             whatsapp: data.whatsapp || "+923216916909",
@@ -30,8 +37,13 @@ export async function getBusinessInfo() {
             heroSubtitle: data.hero_subtitle || "Empowering your business with top-tier technology.",
             heroImage: data.hero_image_url || null,
             facebook: data.facebook || "https://www.facebook.com/profile.php?id=100076568414908",
-            instagram: data.instagram || "https://www.instagram.com/official.noor.ent/"
+            instagram: data.instagram || "https://www.instagram.com/official.noor.ent/",
+            logo: data.logo_url || null,
+            primaryColor: data.primary_color || '#4f8ef7',
+            secondaryColor: data.secondary_color || '#050818',
+            siteName: data.site_name || 'NOORENTERPRISES'
         };
+        return businessInfoCache;
     } catch (error) {
         console.error("Error fetching business info from Supabase:", error);
         return getDefaultBusinessInfo();
@@ -49,7 +61,11 @@ function getDefaultBusinessInfo() {
         address: "M21, M22 Saeed Center, Fraid Town Road, Sahiwal",
         heroHeadline: "Modern IT & POS Solutions",
         heroSubtitle: "Empowering your business with top-tier technology.",
-        heroImage: null
+        heroImage: null,
+        logo: null,
+        primaryColor: '#4f8ef7',
+        secondaryColor: '#050818',
+        siteName: 'NOORENTERPRISES'
     };
 }
 
@@ -68,7 +84,11 @@ export async function updateBusinessInfo(businessData) {
             phones: businessData.phones,
             address: businessData.address,
             facebook: businessData.facebook,
-            instagram: businessData.instagram
+            instagram: businessData.instagram,
+            logo_url: businessData.logo,
+            primary_color: businessData.primaryColor,
+            secondary_color: businessData.secondaryColor,
+            site_name: businessData.siteName
         };
 
         const { error } = await supabase
@@ -76,6 +96,7 @@ export async function updateBusinessInfo(businessData) {
             .upsert({ id: 1, ...payload });
 
         if (error) throw error;
+        businessInfoCache = businessData;
         return true;
     } catch (error) {
         console.error("Error updating business info in Supabase:", error);
@@ -86,14 +107,17 @@ export async function updateBusinessInfo(businessData) {
 /**
  * Fetches Categories from Supabase
  */
-export async function getCategories() {
+export async function getCategories(forceRefresh = false) {
+    if (categoriesCache.length > 0 && !forceRefresh) return categoriesCache;
+    
     try {
         const { data, error } = await supabase
             .from('categories')
             .select('name');
             
         if (error) throw error;
-        return data.map(c => c.name);
+        categoriesCache = data.map(c => c.name);
+        return categoriesCache;
     } catch (error) {
         console.error("Error fetching categories from Supabase:", error);
         return ["POS", "Printers", "Scanners", "Laptops", "Accessories"];
@@ -110,6 +134,7 @@ export async function updateCategories(categoriesList) {
         const rows = categoriesList.map(name => ({ name }));
         const { error } = await supabase.from('categories').insert(rows);
         if (error) throw error;
+        categoriesCache = categoriesList;
         return true;
     } catch (error) {
         console.error("Error updating categories in Supabase:", error);
@@ -120,7 +145,9 @@ export async function updateCategories(categoriesList) {
 /**
  * Fetches all Products from Supabase
  */
-export async function getProducts() {
+export async function getProducts(forceRefresh = false) {
+    if (productsCache.length > 0 && !forceRefresh) return productsCache;
+    
     try {
         const { data, error } = await supabase
             .from('products')
@@ -128,10 +155,12 @@ export async function getProducts() {
             .order('created_at', { ascending: false });
             
         if (error) throw error;
-        return data.map(item => mapSupabaseProduct(item));
+        const products = data.map(item => mapSupabaseProduct(item));
+        productsCache = products;
+        return productsCache;
     } catch (error) {
         console.error("Error fetching products from Supabase:", error);
-        return [];
+        return productsCache;
     }
 }
 
@@ -142,7 +171,7 @@ export function subscribeToProducts(callback) {
     const channel = supabase
         .channel('products_changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-            const products = await getProducts();
+            const products = await getProducts(true);
             callback(products);
         })
         .subscribe();
@@ -170,6 +199,8 @@ export async function addProduct(productData) {
             show_price: productData.showPrice,
             stock_status: productData.stockStatus,
             image_url: productData.image,
+            images: productData.images || [],
+            show_on_homepage: productData.showOnHomepage ?? true,
             availability: productData.stockStatus === 'In Stock',
             warranty: productData.warranty
         };
@@ -202,6 +233,8 @@ export async function updateProduct(id, productData) {
             show_price: productData.showPrice,
             stock_status: productData.stockStatus,
             image_url: productData.image,
+            images: productData.images || [],
+            show_on_homepage: productData.showOnHomepage ?? true,
             availability: productData.stockStatus === 'In Stock',
             warranty: productData.warranty
         };
@@ -269,8 +302,32 @@ function mapSupabaseProduct(item) {
         stockStatus: item.stock_status || (item.availability ? "In Stock" : "Out of Stock"),
         availability: item.availability,
         image: item.image_url || "",
+        images: item.images || [],
+        showOnHomepage: item.show_on_homepage ?? true,
         warranty: item.warranty || ""
     };
+}
+
+/**
+ * Fetches User Profile and Role
+ */
+export async function getUserProfile() {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+    }
 }
 
 /**

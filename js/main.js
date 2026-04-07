@@ -7,39 +7,60 @@ import {
 } from './data.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Theme Initialization
+    // 1. Theme Initialization (Local)
     initTheme();
 
-    // 2. Initial Data Fetch
-    const business = await getBusinessInfo();
-    const categories = await getCategories();
-    const services = await getServices();
+    // 2. Initial Data Fetch (Parallel)
+    const [business, categories, services, products] = await Promise.all([
+        getBusinessInfo(),
+        getCategories(),
+        getServices(),
+        getProducts()
+    ]);
     
-    // 3. Populate Content
+    // 3. Dynamic Branding & Colors
+    applyBranding(business);
+
+    // 4. Populate Content
     populateContent(business);
 
-    // 4. Render Services
+    // 5. Render Services
     renderServices(services);
 
-    // 5. Setup Filter Buttons
+    // 6. Setup Filter Buttons
     setupFilters(categories, business);
 
-    // 6. Setup General Listeners (Menu/Scroll)
+    // 7. Setup General Listeners (Menu/Scroll)
     setupGeneralListeners();
 
-    // 7. Setup Advanced Features (Search/Theme/Modal)
+    // 8. Setup Advanced Features (Search/Theme/Modal)
     setupAdvancedFeatures(business);
 
-    // 8. Lead Form Submission
+    // 9. Lead Form Submission
     setupLeadForm();
 
-    // 9. Real-time Product Stream
-    subscribeToProducts((products) => {
+    // 10. Initial Product Render (Homepage focus)
+    renderProducts(products, 'all', business);
+    updateSearchIndex(products, business);
+
+    // 11. Real-time Product Stream
+    subscribeToProducts((updatedProducts) => {
         const activeFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
-        renderProducts(products, activeFilter, business);
-        updateSearchIndex(products, business);
+        renderProducts(updatedProducts, activeFilter, business);
+        updateSearchIndex(updatedProducts, business);
     });
 });
+
+function applyBranding(b) {
+    if (b.primaryColor) document.documentElement.style.setProperty('--accent', b.primaryColor);
+    if (b.secondaryColor) document.documentElement.style.setProperty('--secondary', b.secondaryColor);
+    if (b.siteName) document.title = `${b.siteName} | Digital Shepherd`;
+    
+    const logoPlaceholder = document.getElementById('main-logo');
+    if (logoPlaceholder && b.logo) {
+        logoPlaceholder.innerHTML = `<img src="${b.logo}" alt="${b.siteName}" style="height: 40px; width: auto;">`;
+    }
+}
 
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -114,47 +135,50 @@ function updateSearchIndex(products, business) {
     const searchResults = document.getElementById('search-results');
 
     if (searchInput && searchResults) {
-        searchInput.addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase().trim();
-            if (val.length < 1) {
-                searchResults.classList.remove('active');
-                return;
-            }
+        // Use a flag to avoid multiple listeners
+        if (!searchInput.dataset.listener) {
+            searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase().trim();
+                if (val.length < 1) {
+                    searchResults.classList.remove('active');
+                    return;
+                }
 
-            const matches = searchIndex.filter(p => 
-                p.name.toLowerCase().includes(val) || 
-                (p.brand && p.brand.toLowerCase().includes(val)) ||
-                (p.modelNumber && p.modelNumber.toLowerCase().includes(val))
-            ).slice(0, 5);
+                const matches = searchIndex.filter(p => 
+                    p.name.toLowerCase().includes(val) || 
+                    (p.brand && p.brand.toLowerCase().includes(val)) ||
+                    (p.modelNumber && p.modelNumber.toLowerCase().includes(val))
+                ).slice(0, 5);
 
-            if (matches.length > 0) {
-                searchResults.innerHTML = matches.map(p => `
-                    <div class="search-item" data-id="${p.id}">
-                        ${p.image ? `<img src="${p.image}" class="search-thumb">` : '<div class="search-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--border)"><i class="fas fa-box" style="font-size:1rem;color:var(--text-muted)"></i></div>'}
-                        <div class="search-info">
-                            <h4>${p.name}</h4>
-                            <p>${p.brand || ''} ${p.modelNumber || ''}</p>
+                if (matches.length > 0) {
+                    searchResults.innerHTML = matches.map(p => `
+                        <div class="search-item" data-id="${p.id}">
+                            ${(p.images?.[0] || p.image) ? `<img src="${p.images?.[0] || p.image}" class="search-thumb">` : '<div class="search-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--border)"><i class="fas fa-box" style="font-size:1rem;color:var(--text-muted)"></i></div>'}
+                            <div class="search-info">
+                                <h4>${p.name}</h4>
+                                <p>${p.brand || ''} ${p.modelNumber || ''}</p>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
-                searchResults.classList.add('active');
+                    `).join('');
+                    searchResults.classList.add('active');
 
-                searchResults.querySelectorAll('.search-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const id = item.getAttribute('data-id');
-                        const product = matches.find(m => m.id === id);
-                        openQuickView(product, business);
-                        searchResults.classList.remove('active');
-                        searchInput.value = '';
+                    searchResults.querySelectorAll('.search-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const id = item.getAttribute('data-id');
+                            const product = matches.find(m => m.id === id);
+                            openQuickView(product, business);
+                            searchResults.classList.remove('active');
+                            searchInput.value = '';
+                        });
                     });
-                });
-            } else {
-                searchResults.innerHTML = '<div style="padding: 1rem; color: var(--text-muted); font-size: 0.8rem; text-align: center;">No results found</div>';
-                searchResults.classList.add('active');
-            }
-        });
+                } else {
+                    searchResults.innerHTML = '<div style="padding: 1rem; color: var(--text-muted); font-size: 0.8rem; text-align: center;">No results found</div>';
+                    searchResults.classList.add('active');
+                }
+            });
+            searchInput.dataset.listener = "true";
+        }
 
-        // Close search list on click outside
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                 searchResults.classList.remove('active');
@@ -167,12 +191,12 @@ function openQuickView(p, b) {
     const modal = document.getElementById('qv-modal');
     if (!modal) return;
 
-    document.getElementById('qv-img').src = p.image || 'https://via.placeholder.com/400?text=No+Image';
+    const mainImg = p.images?.[0] || p.image || '';
+    document.getElementById('qv-img').src = mainImg || 'https://via.placeholder.com/400?text=No+Image';
     document.getElementById('qv-brand').textContent = p.brand || 'General';
     document.getElementById('qv-name').textContent = p.name;
     document.getElementById('qv-model').textContent = p.modelNumber ? `Model: ${p.modelNumber}` : '';
     
-    // Process description (simple bullet point support)
     const descEl = document.getElementById('qv-desc');
     if (p.description.includes('\n') || p.description.includes('•')) {
         const lines = p.description.split(/\n|•/).filter(l => l.trim().length > 0);
@@ -200,12 +224,12 @@ function openQuickView(p, b) {
 }
 
 function populateContent(b) {
-    // Texts
-    document.querySelectorAll('#business-name, #footer-business-name').forEach(el => el.textContent = b.name);
+    document.querySelectorAll('#business-name, #footer-business-name').forEach(el => el.textContent = b.siteName || b.name);
     
     const aboutBusinessName = document.getElementById('about-business-name');
     if (aboutBusinessName) {
-        let shortName = b.name.includes('(') ? b.name.split('(')[1].replace(')', '') : b.name;
+        const name = b.siteName || b.name;
+        let shortName = name.includes('(') ? name.split('(')[1].replace(')', '') : name;
         aboutBusinessName.textContent = shortName;
     }
 
@@ -221,9 +245,7 @@ function populateContent(b) {
     const heroImage = document.getElementById('hero-main-img');
     if (heroImage && b.heroImage) heroImage.src = b.heroImage;
     
-    // Contact Info
     const waLink = `https://wa.me/${b.whatsapp.replace(/[^0-9]/g, '')}`;
-    
     const navWa = document.getElementById('nav-whatsapp');
     if (navWa) navWa.href = waLink;
     
@@ -239,14 +261,12 @@ function populateContent(b) {
     const contactAddress = document.getElementById('contact-address');
     if (contactAddress) contactAddress.textContent = b.address;
 
-    // Socials
     const fb = document.getElementById('contact-facebook');
     if(fb) fb.href = b.facebook;
     
     const ig = document.getElementById('contact-instagram');
     if(ig) ig.href = b.instagram;
 
-    // Footer Year
     const yearSpan = document.getElementById('current-year');
     if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 }
@@ -255,12 +275,18 @@ function renderProducts(products, filter, business) {
     const grid = document.getElementById('products-grid');
     if (!grid) return;
     
+    // Filter by Homepage visibility if on homepage (default)
+    // Actually, filter by category and then by visibility
+    let filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+    
+    // On the main landing page, we usually only want those marked for homepage
+    if (filter === 'all') {
+        filtered = filtered.filter(p => p.showOnHomepage);
+    }
+
     grid.innerHTML = '';
-    
-    const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
-    
     if (filtered.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 0; font-size: 1.2rem;">No products found in this category.</p>';
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 0; font-size: 1.2rem;">No products found.</p>';
         return;
     }
 
@@ -270,19 +296,11 @@ function renderProducts(products, filter, business) {
         if (stockStatus === 'Out of Stock') statusClass = 'badge-outofstock';
         if (stockStatus === 'Coming Soon') statusClass = 'badge-comingsoon';
         
-        let priceHtml = '';
-        if (p.showPrice && p.price) {
-            priceHtml = `<div class="product-price">${p.price}</div>`;
-        } else {
-            priceHtml = `<div style="font-size:0.9rem; font-weight: 500; color:var(--text-muted);">Contact for price</div>`;
-        }
-
+        const priceHtml = (p.showPrice && p.price) ? `<div class="product-price">${p.price}</div>` : `<div style="font-size:0.9rem; font-weight: 500; color:var(--text-muted);">Contact for price</div>`;
         const waMsg = encodeURIComponent(`Hi, I'm interested in the ${p.name} - ${p.modelNumber || ''}.`);
         const waLink = `https://wa.me/${business.whatsapp.replace(/[^0-9]/g, '')}?text=${waMsg}`;
-
-        const imgHtml = p.image && p.image.trim() !== '' 
-            ? `<img src="${p.image}" alt="${p.name}" loading="lazy">` 
-            : `<i class="fas fa-box" style="font-size: 3rem; color: #333; opacity: 0.3;"></i>`;
+        const mainImg = p.images?.[0] || p.image || '';
+        const imgHtml = mainImg ? `<img src="${mainImg}" alt="${p.name}" loading="lazy">` : `<i class="fas fa-box" style="font-size: 3rem; color: #333; opacity: 0.3;"></i>`;
 
         const card = document.createElement('div');
         card.className = 'product-card';
@@ -315,9 +333,7 @@ function renderProducts(products, filter, business) {
 function renderServices(services) {
     const grid = document.getElementById('services-grid');
     if (!grid) return;
-    
     grid.innerHTML = '';
-    
     services.forEach(s => {
         const card = document.createElement('div');
         card.className = 'service-card';
@@ -335,7 +351,6 @@ function setupFilters(categories, business) {
     if(!filterContainer) return;
 
     filterContainer.innerHTML = `<button class="filter-btn active" data-filter="all">All Products</button>`;
-    
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'filter-btn';
@@ -344,61 +359,26 @@ function setupFilters(categories, business) {
         filterContainer.appendChild(btn);
     });
 
-    const newFilters = filterContainer.querySelectorAll('.filter-btn');
-    newFilters.forEach(btn => {
+    const buttons = filterContainer.querySelectorAll('.filter-btn');
+    buttons.forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            newFilters.forEach(b => b.classList.remove('active'));
+            buttons.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             const filter = e.target.getAttribute('data-filter');
-            // Re-render will happen instantly through the state of products
-            const products = await getProducts();
+            const products = await getProducts(); // Uses cache
             renderProducts(products, filter, business);
         });
     });
 }
 
 function setupGeneralListeners() {
-    // Mobile Menu
     const btn = document.getElementById('mobile-menu-btn');
     const nav = document.getElementById('desktop-nav');
-    
     if (btn && nav) {
         btn.addEventListener('click', () => {
             nav.classList.toggle('active');
             const icon = btn.querySelector('i');
-            if (nav.classList.contains('active')) {
-                icon.className = 'fas fa-times';
-            } else {
-                icon.className = 'fas fa-bars';
-            }
-        });
-
-        nav.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                nav.classList.remove('active');
-                if (btn) btn.querySelector('i').className = 'fas fa-bars';
-            });
+            icon.className = nav.classList.contains('active') ? 'fas fa-times' : 'fas fa-bars';
         });
     }
-
-    // Smooth scrolling
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            if(targetId === '#') return;
-            
-            const target = document.querySelector(targetId);
-            if (target) {
-                const headerOffset = 80;
-                const elementPosition = target.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-   
-                window.scrollTo({
-                     top: offsetPosition,
-                     behavior: "smooth"
-                });
-            }
-        });
-    });
 }
