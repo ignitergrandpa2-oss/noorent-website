@@ -37,7 +37,7 @@
     <!-- Admin Wrapper -->
     <div id="admin-wrapper" class="admin-wrapper" style="display: none;">
         <!-- Sidebar -->
-        <aside class="admin-sidebar">
+        <aside class="admin-sidebar" id="admin-sidebar">
             <div class="admin-brand">
                 <h2>Noor.Ent<span> Admin</span></h2>
             </div>
@@ -47,11 +47,19 @@
                 <li><a href="#" data-tab="tab-settings"><i class="fas fa-cog"></i> Site Settings</a></li>
                 <li><a href="#" data-tab="tab-backup"><i class="fas fa-database"></i> Backup / Restore</a></li>
             </ul>
-            <div style="padding: 1.5rem;">
+            <div class="sidebar-footer">
                 <button id="btn-logout" class="btn btn-outline" style="width: 100%;">Logout</button>
-                <a href="index.html" class="btn" style="width: 100%; margin-top: 10px; background: var(--card-bg); color: #fff;">View Site</a>
+                <a href="index.html" class="btn btn-view-site">View Site</a>
             </div>
         </aside>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="mobile-nav">
+            <a href="#" class="active" data-tab="tab-dashboard"><i class="fas fa-chart-line"></i><span>Home</span></a>
+            <a href="#" data-tab="tab-products"><i class="fas fa-box"></i><span>Products</span></a>
+            <a href="#" data-tab="tab-settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+            <a href="#" id="mobile-logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+        </nav>
 
         <!-- Main Content -->
         <main class="admin-main">
@@ -142,20 +150,6 @@
                                 <label>Slogan / Subtitle</label>
                                 <input type="text" id="set-slogan">
                             </div>
-                            <div class="form-group">
-                                <label>Logo (Square image recommended)</label>
-                                <div class="image-upload-wrapper">
-                                    <div class="image-preview-container" id="logo-preview-container" style="width: 80px; height: 80px;">
-                                        <i class="fas fa-certificate"></i>
-                                    </div>
-                                    <div class="file-input-group">
-                                        <label for="set-logo-file" class="custom-file-upload">Upload Logo</label>
-                                        <input type="file" id="set-logo-file" accept="image/*">
-                                        <input type="hidden" id="set-logo">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-section-grid">
                                 <div class="form-group">
                                     <label>Primary Theme Color</label>
                                     <input type="color" id="set-primary-color" value="#4f8ef7">
@@ -165,6 +159,24 @@
                                     <input type="color" id="set-secondary-color" value="#050818">
                                 </div>
                             </div>
+                            
+                            <div class="form-group">
+                                <label>Logo (Square image recommended)</label>
+                                <div class="image-upload-wrapper">
+                                    <div class="image-preview-container" id="logo-preview-container" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-certificate"></i>
+                                    </div>
+                                    <div class="file-input-group">
+                                        <label for="set-logo-file" class="custom-file-upload">Upload Logo</label>
+                                        <input type="file" id="set-logo-file" accept="image/*" style="display: none;">
+                                        <input type="hidden" id="set-logo">
+                                        <div class="upload-progress-container" id="logo-upload-progress">
+                                            <div class="upload-progress-bar"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label>Hero Headline</label>
                                 <input type="text" id="set-hero-headline">
@@ -283,33 +295,39 @@
                 
                 <!-- Step 1: Basic Info -->
                 <div class="form-step active" id="step-1">
-                    <div class="form-group">
-                        <label>Product Name <span style="color: var(--accent);">*</span></label>
-                        <input type="text" id="prod-name" required placeholder="Enter product name">
-                    </div>
-                    
-                    <div class="form-section-grid">
+                    <div class="form-section-group">
+                        <h4 class="form-group-title"><i class="fas fa-info-circle"></i> Basic Identification</h4>
                         <div class="form-group">
-                            <label>Brand</label>
-                            <input type="text" id="prod-brand" placeholder="E.g. HP, Xprinter">
+                            <label>Product Name <span style="color: var(--accent);">*</span></label>
+                            <input type="text" id="prod-name" required placeholder="Enter product name">
                         </div>
-                        <div class="form-group">
-                            <label>Model Number</label>
-                            <input type="text" id="prod-model" placeholder="E.g. XP-420B">
+                        
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label>Brand</label>
+                                <input type="text" id="prod-brand" placeholder="E.g. HP, Xprinter">
+                            </div>
+                            <div class="form-group">
+                                <label>Model Number</label>
+                                <input type="text" id="prod-model" placeholder="E.g. XP-420B">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Category <span style="color: var(--accent);">*</span></label>
-                        <input type="text" id="prod-category" placeholder="E.g. POS, Printers..." required list="category-list">
-                        <datalist id="category-list">
-                            <!-- Dynamically populated from JS -->
-                        </datalist>
-                    </div>
+                    <div class="form-section-group">
+                        <h4 class="form-group-title"><i class="fas fa-tags"></i> Categorization</h4>
+                        <div class="form-group">
+                            <label>Category <span style="color: var(--accent);">*</span></label>
+                            <input type="text" id="prod-category" placeholder="E.g. POS, Printers..." required list="category-list">
+                            <datalist id="category-list">
+                                <!-- Dynamically populated from JS -->
+                            </datalist>
+                        </div>
 
-                    <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
-                        <input type="checkbox" id="prod-homepage" checked style="width: 20px; height: 20px; margin: 0;">
-                        <label for="prod-homepage" style="margin: 0; cursor: pointer; color: var(--text-main); font-weight: 500;">Show on Homepage?</label>
+                        <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <input type="checkbox" id="prod-homepage" checked style="width: 20px; height: 20px; margin: 0;">
+                            <label for="prod-homepage" style="margin: 0; cursor: pointer; color: var(--text-main); font-weight: 500;">Show on Homepage?</label>
+                        </div>
                     </div>
                 </div>
 

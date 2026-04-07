@@ -1,9 +1,40 @@
 import { supabase } from './supabase-config.js';
 
-// --- Local Cache ---
+// --- Local Cache & Storage Helpers ---
 let productsCache = [];
 let categoriesCache = [];
 let businessInfoCache = null;
+
+const CACHE_KEY_BUSINESS = 'noorent_business_info';
+const CACHE_KEY_CATEGORIES = 'noorent_categories';
+const CACHE_TTL = 3600000; // 1 hour in ms
+
+function setStorageCache(key, data) {
+    try {
+        const cacheObj = {
+            timestamp: Date.now(),
+            data: data
+        };
+        localStorage.setItem(key, JSON.stringify(cacheObj));
+    } catch (e) {
+        console.warn("Storage cache failed", e);
+    }
+}
+
+function getStorageCache(key) {
+    try {
+        const cached = localStorage.getItem(key);
+        if (!cached) return null;
+        const cacheObj = JSON.parse(cached);
+        if (Date.now() - cacheObj.timestamp > CACHE_TTL) {
+            localStorage.removeItem(key);
+            return null;
+        }
+        return cacheObj.data;
+    } catch (e) {
+        return null;
+    }
+}
 
 // --- DB Operations (Supabase) ---
 
@@ -13,6 +44,13 @@ let businessInfoCache = null;
 export async function getBusinessInfo(forceRefresh = false) {
     if (businessInfoCache && !forceRefresh) return businessInfoCache;
     
+    // Check localStorage
+    const saved = getStorageCache(CACHE_KEY_BUSINESS);
+    if (saved && !forceRefresh) {
+        businessInfoCache = saved;
+        return businessInfoCache;
+    }
+
     try {
         const { data, error } = await supabase
             .from('settings')
@@ -43,6 +81,8 @@ export async function getBusinessInfo(forceRefresh = false) {
             secondaryColor: data.secondary_color || '#050818',
             siteName: data.site_name || 'NOORENTERPRISES'
         };
+
+        setStorageCache(CACHE_KEY_BUSINESS, businessInfoCache);
         return businessInfoCache;
     } catch (error) {
         console.error("Error fetching business info from Supabase:", error);
@@ -97,6 +137,7 @@ export async function updateBusinessInfo(businessData) {
 
         if (error) throw error;
         businessInfoCache = businessData;
+        setStorageCache(CACHE_KEY_BUSINESS, businessInfoCache);
         return true;
     } catch (error) {
         console.error("Error updating business info in Supabase:", error);
@@ -109,6 +150,12 @@ export async function updateBusinessInfo(businessData) {
  */
 export async function getCategories(forceRefresh = false) {
     if (categoriesCache.length > 0 && !forceRefresh) return categoriesCache;
+
+    const saved = getStorageCache(CACHE_KEY_CATEGORIES);
+    if (saved && !forceRefresh) {
+        categoriesCache = saved;
+        return categoriesCache;
+    }
     
     try {
         const { data, error } = await supabase
@@ -117,6 +164,7 @@ export async function getCategories(forceRefresh = false) {
             
         if (error) throw error;
         categoriesCache = data.map(c => c.name);
+        setStorageCache(CACHE_KEY_CATEGORIES, categoriesCache);
         return categoriesCache;
     } catch (error) {
         console.error("Error fetching categories from Supabase:", error);
@@ -135,6 +183,7 @@ export async function updateCategories(categoriesList) {
         const { error } = await supabase.from('categories').insert(rows);
         if (error) throw error;
         categoriesCache = categoriesList;
+        setStorageCache(CACHE_KEY_CATEGORIES, categoriesCache);
         return true;
     } catch (error) {
         console.error("Error updating categories in Supabase:", error);
@@ -165,14 +214,24 @@ export async function getProducts(forceRefresh = false) {
 }
 
 /**
- * Real-time subscription to products
+ * Real-time subscription to products with Delta Updates
  */
 export function subscribeToProducts(callback) {
     const channel = supabase
-        .channel('products_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-            const products = await getProducts(true);
-            callback(products);
+        .channel('products-delta')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+            const { eventType, new: newItem, old: oldItem } = payload;
+            
+            if (eventType === 'INSERT') {
+                const mapped = mapSupabaseProduct(newItem);
+                productsCache = [mapped, ...productsCache];
+            } else if (eventType === 'UPDATE') {
+                productsCache = productsCache.map(p => p.id === newItem.id ? mapSupabaseProduct(newItem) : p);
+            } else if (eventType === 'DELETE') {
+                productsCache = productsCache.filter(p => p.id !== oldItem.id);
+            }
+            
+            callback([...productsCache]);
         })
         .subscribe();
         

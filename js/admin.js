@@ -13,46 +13,25 @@ import {
 } from './data.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    let currentEditId = null;
-    let productsList = [];
-    let categoriesList = [];
-    let currentStep = 1;
-    let currentUser = null;
-    let productImages = []; // Array of URLs for the current product being edited
-
-    // --- Auth Elements ---
-    const loginContainer = document.getElementById('login-container');
-    const adminWrapper = document.getElementById('admin-wrapper');
-    const authForm = document.getElementById('auth-form');
-    const authError = document.getElementById('auth-error');
+    let productsSubscriptionCleanup = null;
+    let isInitialized = false;
 
     // --- Monitor Auth State (Supabase) ---
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (session) {
             currentUser = await getUserProfile();
-            showDashboard();
+            if (currentUser && !isInitialized) {
+                showDashboard();
+                isInitialized = true;
+            }
         } else {
+            isInitialized = false;
             showLogin();
+            if (productsSubscriptionCleanup) {
+                productsSubscriptionCleanup();
+                productsSubscriptionCleanup = null;
+            }
         }
-    });
-
-    authForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-password').value;
-        
-        try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-            if (error) throw error;
-            authError.style.display = 'none';
-        } catch (error) {
-            authError.textContent = 'Invalid login: ' + error.message;
-            authError.style.display = 'block';
-        }
-    });
-
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-        await supabase.auth.signOut();
     });
 
     function showDashboard() {
@@ -60,12 +39,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminWrapper.style.display = 'flex';
         
         // Handle Role-Based UI
+        const settingsTab = document.querySelector('[data-tab="tab-settings"]');
+        const backupTab = document.querySelector('[data-tab="tab-backup"]');
+        
         if (currentUser && currentUser.role === 'client_admin') {
-            document.querySelector('[data-tab="tab-settings"]').style.display = 'none';
-            document.querySelector('[data-tab="tab-backup"]').style.display = 'none';
+            if (settingsTab) settingsTab.style.display = 'none';
+            if (backupTab) backupTab.style.display = 'none';
         } else {
-            document.querySelector('[data-tab="tab-settings"]').style.display = 'block';
-            document.querySelector('[data-tab="tab-backup"]').style.display = 'block';
+            if (settingsTab) settingsTab.style.display = 'block';
+            if (backupTab) backupTab.style.display = 'block';
         }
 
         initDashboard();
@@ -77,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Tab Navigation ---
-    const navLinks = document.querySelectorAll('.admin-nav a');
+    const navLinks = document.querySelectorAll('.admin-nav a, .mobile-nav a:not(#mobile-logout)');
     const tabs = document.querySelectorAll('.tab-content');
 
     navLinks.forEach(link => {
@@ -94,20 +76,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             navLinks.forEach(l => l.classList.remove('active'));
             tabs.forEach(t => t.classList.remove('active'));
             
-            e.currentTarget.classList.add('active');
+            // Handle both desktop and mobile link active states
+            const allLinksForThisTab = document.querySelectorAll(`[data-tab="${targetTab}"]`);
+            allLinksForThisTab.forEach(l => l.classList.add('active'));
+
             document.getElementById(targetTab).classList.add('active');
             
-            document.querySelector('.admin-header h2').textContent = e.currentTarget.textContent.trim();
+            const headerTitle = document.querySelector('.admin-header h2');
+            if (headerTitle) headerTitle.textContent = e.currentTarget.textContent.trim();
+            
+            // Scroll to top on mobile
+            if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     });
 
+    const mobileLogout = document.getElementById('mobile-logout');
+    if (mobileLogout) {
+        mobileLogout.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+        });
+    }
+
     // --- Core Functions ---
     async function initDashboard() {
+        // Cleanup existing subscription if any
+        if (productsSubscriptionCleanup) {
+            productsSubscriptionCleanup();
+        }
+
         categoriesList = await getCategories();
         updateCategoryFilter();
         populateSettingsForm();
         
-        subscribeToProducts((products) => {
+        productsSubscriptionCleanup = subscribeToProducts((products) => {
             productsList = products;
             updateStats();
             renderProductsTable();
@@ -163,10 +165,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('stat-instock').textContent = productsList.filter(p => p.availability).length;
     }
 
+    // --- Products Management ---
+    function renderProductsTable() {
+        const tbody = document.getElementById('admin-products-list');
+        const searchInput = document.getElementById('admin-product-search');
+        const filterSelect = document.getElementById('admin-category-filter');
+        
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        const currentFilter = filterSelect ? filterSelect.value : 'all';
+        
+        tbody.innerHTML = '';
+
+        let filtered = productsList.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm) || 
+                                 (p.brand && p.brand.toLowerCase().includes(searchTerm)) ||
+                                 (p.modelNumber && p.modelNumber.toLowerCase().includes(searchTerm));
+            const matchesCategory = currentFilter === 'all' || p.category === currentFilter;
+            return matchesSearch && matchesCategory;
+        });
+
+        filtered.forEach(p => {
+            const tr = document.createElement('tr');
+            const mainImg = p.images?.[0] || p.image || '';
+            const imgHtml = mainImg ? `<img src="${mainImg}" class="product-thumb">` : `<div class="product-thumb"><i class="fas fa-box"></i></div>`;
+            const stockStatus = p.stockStatus || "In Stock";
+            const homeBadge = p.showOnHomepage ? '<i class="fas fa-home" title="On Homepage" style="color: var(--accent); margin-left: 5px;"></i>' : '';
+
+            tr.innerHTML = `
+                <td data-label="Image">${imgHtml}</td>
+                <td data-label="Product">
+                    <div style="font-weight: 600;">${p.name} ${homeBadge}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${p.brand || ''} ${p.modelNumber || ''}</div>
+                </td>
+                <td data-label="Category"><span style="background: rgba(79, 142, 247, 0.1); color: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${p.category || 'General'}</span></td>
+                <td data-label="Price">${p.showPrice && p.price ? p.price : '<span style="color: var(--text-muted);">Hidden</span>'}</td>
+                <td data-label="Stock">${stockStatus}</td>
+                <td data-label="Actions">
+                    <button class="action-btn edit" data-id="${p.id}" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete" data-id="${p.id}" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.edit').forEach(btn => btn.addEventListener('click', (e) => openProductModal(e.currentTarget.getAttribute('data-id'))));
+        tbody.querySelectorAll('.delete').forEach(btn => btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            if (confirm("Delete this product?")) deleteProduct(id).then(() => showToast("Deleted"));
+        }));
+    }
+
     // --- Image Handling & Optimization ---
     
     async function compressImage(file, { maxWidth = 1200, quality = 0.8, format = 'image/webp' }) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
@@ -188,17 +240,97 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ctx.drawImage(img, 0, 0, width, height);
 
                     canvas.toBlob((blob) => {
-                        resolve(blob);
+                        if (blob) resolve(blob);
+                        else reject(new Error("Canvas toBlob failed"));
                     }, format, quality);
                 };
+                img.onerror = (err) => reject(err);
             };
+            reader.onerror = (err) => reject(err);
         });
+    }
+
+    async function processAndUploadImage(file, folder = 'products', progressBar = null) {
+        if (progressBar) {
+            progressBar.style.display = 'block';
+            progressBar.querySelector('.upload-progress-bar').style.width = '0%';
+        }
+
+        try {
+            // 1. Optimize
+            if (progressBar) progressBar.querySelector('.upload-progress-bar').style.width = '20%';
+            const blob = await compressImage(file, { maxWidth: 1200, quality: 0.8, format: 'image/webp' });
+            
+            // 2. Prepare Path
+            const fileName = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}.webp`;
+            if (progressBar) progressBar.querySelector('.upload-progress-bar').style.width = '40%';
+            
+            // 3. Upload to Supabase
+            const { data, error } = await supabase.storage
+                .from('noorent-assets')
+                .upload(fileName, blob, { contentType: 'image/webp' });
+
+            if (error) throw error;
+            if (progressBar) progressBar.querySelector('.upload-progress-bar').style.width = '80%';
+
+            // 4. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('noorent-assets')
+                .getPublicUrl(fileName);
+
+            if (progressBar) {
+                progressBar.querySelector('.upload-progress-bar').style.width = '100%';
+                setTimeout(() => { progressBar.style.display = 'none'; }, 1000);
+            }
+
+            return publicUrl;
+        } catch (error) {
+            if (progressBar) progressBar.style.display = 'none';
+            throw error;
+        }
     }
 
     // --- Multi-Image Upload Logic ---
     const imageListContainer = document.getElementById('multi-image-list');
     const imageInput = document.getElementById('multi-image-input');
     const btnAddImageSlot = document.getElementById('btn-add-image-slot');
+
+    // Site Logo & Hero Uploads
+    const logoInput = document.getElementById('set-logo-file');
+    const heroInput = document.getElementById('set-hero-image-file');
+
+    if (logoInput) {
+        logoInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                showToast("Optimizing and uploading logo...");
+                const url = await processAndUploadImage(file, 'branding');
+                document.getElementById('set-logo').value = url;
+                document.getElementById('logo-preview-container').innerHTML = `<img src="${url}">`;
+                showToast("Logo uploaded!");
+            } catch (err) {
+                alert("Logo upload failed: " + err.message);
+            }
+        });
+    }
+
+    if (heroInput) {
+        heroInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const progressBar = document.getElementById('hero-upload-progress');
+            try {
+                showToast("Optimizing and uploading hero image...");
+                const url = await processAndUploadImage(file, 'branding', progressBar);
+                document.getElementById('set-hero-image').value = url;
+                document.getElementById('hero-preview-container').innerHTML = `<img src="${url}">`;
+                showToast("Hero image updated!");
+            } catch (err) {
+                alert("Hero upload failed: " + err.message);
+            }
+        });
+    }
 
     // Initialize SortableJS
     if (imageListContainer) {
@@ -207,13 +339,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             ghostClass: 'sortable-ghost',
             filter: '.add-slot', // Don't allow dragging the "Add" button
             onEnd: () => {
-                // Sync the productImages array with the new DOM order
                 const newOrder = [];
                 imageListContainer.querySelectorAll('.image-slot:not(.add-slot)').forEach(slot => {
                     newOrder.push(slot.getAttribute('data-url'));
                 });
                 productImages = newOrder;
-                console.log("New image order:", productImages);
                 showToast("Order updated!");
             }
         });
@@ -223,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnAddImageSlot) {
         btnAddImageSlot.addEventListener('click', () => {
-            replaceIndex = null; // Adding new, not replacing
+            replaceIndex = null;
             imageInput.click();
         });
     }
@@ -234,37 +364,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (files.length === 0) return;
 
             try {
-                showToast(replaceIndex !== null ? "Replacing image..." : `Optimizing and uploading ${files.length} images...`);
+                const toastMsg = replaceIndex !== null ? "Replacing image..." : `Processing ${files.length} images...`;
+                showToast(toastMsg);
                 
                 const uploadedUrls = [];
                 for (const file of files) {
-                    const blob = await compressImage(file, { maxWidth: 1200, quality: 0.75, format: 'image/webp' });
-                    const fileName = `products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}.webp`;
-                    
-                    const { data, error } = await supabase.storage
-                        .from('noorent-assets')
-                        .upload(fileName, blob, { contentType: 'image/webp' });
-
-                    if (error) throw error;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('noorent-assets')
-                        .getPublicUrl(fileName);
-
-                    uploadedUrls.push(publicUrl);
+                    const url = await processAndUploadImage(file, 'products');
+                    uploadedUrls.push(url);
                 }
                 
                 if (replaceIndex !== null) {
-                    // Replace the image at the specific index
                     productImages[replaceIndex] = uploadedUrls[0];
                 } else {
-                    // Append new images
                     productImages.push(...uploadedUrls);
                 }
                 
                 renderImageSlots();
-                imageInput.value = ''; // Reset input
+                imageInput.value = '';
                 replaceIndex = null;
+                showToast("Images uploaded successfully!");
             } catch (error) {
                 alert("Upload failed: " + error.message);
                 replaceIndex = null;
@@ -273,7 +391,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderImageSlots() {
-        // Clear all except the "Add" slot
         const slots = imageListContainer.querySelectorAll('.image-slot:not(.add-slot)');
         slots.forEach(s => s.remove());
 
@@ -288,7 +405,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="image-overlay"><i class="fas fa-sync-alt"></i> Replace</div>
             `;
             
-            // Replacement logic
             slot.querySelector('.img-preview').addEventListener('click', () => {
                 replaceIndex = index;
                 imageInput.click();
@@ -297,7 +413,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             imageListContainer.insertBefore(slot, btnAddImageSlot);
         });
 
-        // Bind remove buttons
         imageListContainer.querySelectorAll('.remove-img').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
