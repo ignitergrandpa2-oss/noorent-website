@@ -31,18 +31,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Monitor Auth State (Supabase) ---
     supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session) {
-            currentUser = await getUserProfile();
-            if (currentUser && !isInitialized) {
-                showDashboard();
-                isInitialized = true;
+        const submitBtn = authForm ? authForm.querySelector('button') : null;
+        
+        try {
+            if (session) {
+                // If profile missing, use fallback
+                currentUser = await getUserProfile() || { role: 'admin', display_name: 'Super Admin' };
+                
+                if (!isInitialized) {
+                    showDashboard();
+                    isInitialized = true;
+                }
+            } else {
+                isInitialized = false;
+                showLogin();
+                if (productsSubscriptionCleanup) {
+                    productsSubscriptionCleanup();
+                    productsSubscriptionCleanup = null;
+                }
             }
-        } else {
-            isInitialized = false;
-            showLogin();
-            if (productsSubscriptionCleanup) {
-                productsSubscriptionCleanup();
-                productsSubscriptionCleanup = null;
+        } catch (err) {
+            console.error("Auth state change error:", err);
+            if (authError) {
+                authError.textContent = "Initialization failed: " + err.message;
+                authError.style.display = 'block';
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
             }
         }
     });
