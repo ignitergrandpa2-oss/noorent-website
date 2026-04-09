@@ -15,6 +15,19 @@ import {
 document.addEventListener('DOMContentLoaded', async () => {
     let productsSubscriptionCleanup = null;
     let isInitialized = false;
+    let currentUser = null;
+    let productsList = [];
+    let categoriesList = [];
+    let currentEditId = null;
+    let productImages = [];
+    let currentStep = 1;
+
+    const loginContainer = document.getElementById('login-container');
+    const adminWrapper = document.getElementById('admin-wrapper');
+    const authForm = document.getElementById('auth-form');
+    const authError = document.getElementById('auth-error');
+    const btnLogout = document.getElementById('btn-logout');
+    const mobileLogout = document.getElementById('mobile-logout');
 
     // --- Monitor Auth State (Supabase) ---
     supabase.auth.onAuthStateChange(async (event, session) => {
@@ -33,6 +46,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const submitBtn = authForm.querySelector('button');
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+                authError.style.display = 'none';
+                
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } catch (err) {
+                authError.textContent = err.message;
+                authError.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
+            }
+        });
+    }
 
     function showDashboard() {
         loginContainer.style.display = 'none';
@@ -90,11 +126,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    const mobileLogout = document.getElementById('mobile-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            if (confirm("Are you sure you want to logout?")) {
+                await supabase.auth.signOut();
+            }
+        });
+    }
+
     if (mobileLogout) {
         mobileLogout.addEventListener('click', async (e) => {
             e.preventDefault();
-            await supabase.auth.signOut();
+            if (confirm("Logout from Admin?")) {
+                await supabase.auth.signOut();
+            }
         });
     }
 

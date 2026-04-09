@@ -163,7 +163,31 @@ export async function getCategories(forceRefresh = false) {
             .select('name');
             
         if (error) throw error;
-        categoriesCache = data.map(c => c.name);
+        
+        // If no categories in DB, return defaults
+        if (!data || data.length === 0) {
+            categoriesCache = [
+                "POS",
+                "Printers",
+                "Printers::LaserJet Printers",
+                "Printers::Thermal Printers",
+                "Printers::Barcode Printers",
+                "Scanners",
+                "Laptops",
+                "Accessories",
+                "Accessories::Power Cables",
+                "Accessories::VGA Cables",
+                "Accessories::Mouse",
+                "Accessories::Keyboard",
+                "Accessories::Mouse & Keyboard Set",
+                "Accessories::Adapters & Chargers",
+                "Accessories::USB Flash Drives",
+                "Accessories::Other Accessories"
+            ];
+        } else {
+            categoriesCache = data.map(c => c.name);
+        }
+        
         setStorageCache(CACHE_KEY_CATEGORIES, categoriesCache);
         return categoriesCache;
     } catch (error) {
