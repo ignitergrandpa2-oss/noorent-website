@@ -411,9 +411,9 @@ function mapSupabaseProduct(item) {
 /**
  * Fetches User Profile and Role
  */
-export async function getUserProfile() {
+export async function getUserProfile(providedUser = null) {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = providedUser || (await supabase.auth.getUser()).data.user;
         if (!user) return null;
 
         const { data, error } = await supabase
@@ -422,7 +422,10 @@ export async function getUserProfile() {
             .eq('id', user.id)
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.warn("Profile fetch error:", error.message);
+            return null;
+        }
         return data;
     } catch (error) {
         console.error("Error fetching user profile:", error);

@@ -30,19 +30,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileLogout = document.getElementById('mobile-logout');
 
     // --- Monitor Auth State (Supabase) ---
+    console.log("Setting up Auth Listener...");
     supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log("Auth Event:", event, session ? "Session Active" : "No Session");
         const submitBtn = authForm ? authForm.querySelector('button') : null;
         
         try {
             if (session) {
-                // If profile missing, use fallback
-                currentUser = await getUserProfile() || { role: 'admin', display_name: 'Super Admin' };
+                // Use session.user directly to avoid an extra getUser() call
+                // Fallback to a default admin profile if the database fetch fails
+                currentUser = await getUserProfile(session.user) || { 
+                    role: 'admin', 
+                    display_name: session.user.email.split('@')[0], 
+                    email: session.user.email 
+                };
                 
+                console.log("Logged in as:", currentUser.display_name, "(Role:", currentUser.role + ")");
+
                 if (!isInitialized) {
                     showDashboard();
                     isInitialized = true;
                 }
             } else {
+                console.log("No session detected, showing login.");
                 isInitialized = false;
                 showLogin();
                 if (productsSubscriptionCleanup) {
@@ -51,16 +61,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (err) {
-            console.error("Auth state change error:", err);
+            console.error("Critical Auth Error:", err);
             if (authError) {
                 authError.textContent = "Initialization failed: " + err.message;
                 authError.style.display = 'block';
+            }
+            // If we have a session but initialization failed, try to show the dashboard anyway
+            if (session && !isInitialized) {
+                console.warn("Attempting dashboard recovery...");
+                showDashboard();
+                isInitialized = true;
             }
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
             }
+        }
+    });
+
+    // Check current session immediately in case event listener was too late
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && !isInitialized) {
+            console.log("Active session found on load.");
+            // We don't need to manually call showDashboard here because onAuthStateChange 
+            // will fire with 'INITIAL_SESSION' event.
         }
     });
 
