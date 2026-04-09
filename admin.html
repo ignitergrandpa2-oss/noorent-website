@@ -317,11 +317,16 @@
                     <div class="form-section-group">
                         <h4 class="form-group-title"><i class="fas fa-tags"></i> Categorization</h4>
                         <div class="form-group">
-                            <label>Category <span style="color: var(--accent);">*</span></label>
-                            <input type="text" id="prod-category" placeholder="E.g. POS, Printers..." required list="category-list">
-                            <datalist id="category-list">
+                            <label>Main Category <span style="color: var(--accent);">*</span></label>
+                            <select id="prod-main-category" required style="width: 100%; border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; background: var(--secondary); color: var(--text-main); margin-bottom: 1rem;">
                                 <!-- Dynamically populated from JS -->
-                            </datalist>
+                            </select>
+                            
+                            <label>Subcategory <span style="color: var(--text-muted); font-size: 0.8rem;">(Optional)</span></label>
+                            <select id="prod-sub-category" style="width: 100%; border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; background: var(--secondary); color: var(--text-main);">
+                                <option value="">None</option>
+                                <!-- Dynamically populated from JS based on Main Category -->
+                            </select>
                         </div>
 
                         <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
@@ -395,17 +400,31 @@
 
     <!-- Category Modal -->
     <div id="category-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 600px;">
             <span class="close-modal">&times;</span>
-            <h3 style="margin-bottom: 1.5rem;">Manage Categories</h3>
-            <form id="category-form" style="margin-bottom: 2rem; display: flex; gap: 0.5rem;">
-                <input type="text" id="new-category-name" placeholder="New Category Name" required style="flex: 1;">
-                <button type="submit" class="btn btn-primary">Add</button>
+            <h3 style="margin-bottom: 0.5rem;"><i class="fas fa-sitemap" style="color: var(--accent);"></i> Manage Categories</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Organize products with main and subcategories.</p>
+            
+            <form id="category-form" style="margin-bottom: 2rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border);">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block;">Main Category (Required)</label>
+                        <input type="text" id="new-category-main" placeholder="E.g. Printers" required style="width: 100%; border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; background: var(--secondary); color: var(--text-main);">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; display: block;">Subcategory (Optional)</label>
+                        <input type="text" id="new-category-sub" placeholder="E.g. LaserJet Printers" style="width: 100%; border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; background: var(--secondary); color: var(--text-main);">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="padding: 0.8rem 1.5rem;"><i class="fas fa-plus"></i> Add</button>
+                </div>
             </form>
+            
             <div id="category-list-container">
-                <ul id="admin-category-list-items" class="manage-list">
-                    <!-- Categories mapped here -->
-                </ul>
+                <div id="admin-category-tree" class="category-tree">
+                    <!-- Hierarchical categories mapped here -->
+                </div>
             </div>
         </div>
     </div>

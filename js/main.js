@@ -277,11 +277,20 @@ function renderProducts(products, filter, business) {
     
     // Filter by Homepage visibility if on homepage (default)
     // Actually, filter by category and then by visibility
-    let filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+    // Logic: 
+    // If 'all', show products marked for homepage.
+    // If 'MainCat', show all products whose category starts with 'MainCat::' OR is exactly 'MainCat'.
+    // If 'MainCat::SubCat', show only exact matches.
     
-    // On the main landing page, we usually only want those marked for homepage
+    let filtered;
     if (filter === 'all') {
-        filtered = filtered.filter(p => p.showOnHomepage);
+        filtered = products.filter(p => p.showOnHomepage);
+    } else if (!filter.includes('::')) {
+        // Filter by Main Category (match both parent and children)
+        filtered = products.filter(p => p.category === filter || p.category.startsWith(filter + '::'));
+    } else {
+        // Filter by Sub Category (exact match)
+        filtered = products.filter(p => p.category === filter);
     }
 
     grid.innerHTML = '';
@@ -304,6 +313,10 @@ function renderProducts(products, filter, business) {
 
         const card = document.createElement('div');
         card.className = 'product-card';
+        
+        // Clean category name for display
+        const displayCategory = (p.category || 'General').split('::').pop();
+        
         card.innerHTML = `
             <div class="product-image">
                 ${imgHtml}
@@ -311,7 +324,7 @@ function renderProducts(products, filter, business) {
                 <span class="product-badge ${statusClass}">${stockStatus}</span>
             </div>
             <div class="product-info">
-                <div class="product-category">${p.category || 'General'}</div>
+                <div class="product-category">${displayCategory}</div>
                 <h3 class="product-name">${p.name}</h3>
                 <p class="product-desc">${p.description.length > 80 ? p.description.substring(0, 80) + '...' : p.description}</p>
                 <div class="product-footer">
@@ -348,14 +361,18 @@ function renderServices(services) {
 
 function setupFilters(categories, business) {
     const filterContainer = document.getElementById('products-filter');
+    const subFilterBar = document.getElementById('sub-filter-bar');
     if(!filterContainer) return;
 
+    // 1. Extract Unique Main Categories
+    const mainCategories = [...new Set(categories.map(cat => cat.split('::')[0]))].sort();
+
     filterContainer.innerHTML = `<button class="filter-btn active" data-filter="all">All Products</button>`;
-    categories.forEach(cat => {
+    mainCategories.forEach(main => {
         const btn = document.createElement('button');
         btn.className = 'filter-btn';
-        btn.setAttribute('data-filter', cat);
-        btn.textContent = cat;
+        btn.setAttribute('data-filter', main);
+        btn.textContent = main;
         filterContainer.appendChild(btn);
     });
 
@@ -363,10 +380,59 @@ function setupFilters(categories, business) {
     buttons.forEach(btn => {
         btn.addEventListener('click', async (e) => {
             buttons.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const filter = e.target.getAttribute('data-filter');
-            const products = await getProducts(); // Uses cache
-            renderProducts(products, filter, business);
+            e.currentTarget.classList.add('active');
+            
+            const filter = e.currentTarget.getAttribute('data-filter');
+            const products = await getProducts();
+            
+            // Handle sub-filters appearance
+            if (filter === 'all') {
+                subFilterBar.classList.remove('active');
+                renderProducts(products, 'all', business);
+            } else {
+                renderSubFilters(filter, categories, business);
+                // Initially show all for this main category
+                renderProducts(products, filter, business);
+            }
+        });
+    });
+}
+
+function renderSubFilters(mainCategory, allCategories, business) {
+    const subFilterBar = document.getElementById('sub-filter-bar');
+    if (!subFilterBar) return;
+
+    const subCats = allCategories
+        .filter(c => c.startsWith(mainCategory + '::'))
+        .map(c => c.split('::')[1]);
+
+    if (subCats.length === 0) {
+        subFilterBar.classList.remove('active');
+        return;
+    }
+
+    subFilterBar.innerHTML = `<button class="sub-filter-btn active" data-sub="all">All ${mainCategory}</button>`;
+    subCats.forEach(sub => {
+        const btn = document.createElement('button');
+        btn.className = 'sub-filter-btn';
+        btn.setAttribute('data-sub', sub);
+        btn.textContent = sub;
+        subFilterBar.appendChild(btn);
+    });
+
+    subFilterBar.classList.add('active');
+
+    const subButtons = subFilterBar.querySelectorAll('.sub-filter-btn');
+    subButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            subButtons.forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            const subName = e.currentTarget.getAttribute('data-sub');
+            const products = await getProducts();
+            
+            const fullFilter = subName === 'all' ? mainCategory : `${mainCategory}::${subName}`;
+            renderProducts(products, fullFilter, business);
         });
     });
 }

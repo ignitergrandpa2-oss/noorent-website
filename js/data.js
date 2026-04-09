@@ -168,7 +168,24 @@ export async function getCategories(forceRefresh = false) {
         return categoriesCache;
     } catch (error) {
         console.error("Error fetching categories from Supabase:", error);
-        return ["POS", "Printers", "Scanners", "Laptops", "Accessories"];
+        return [
+            "POS",
+            "Printers",
+            "Printers::LaserJet Printers",
+            "Printers::Thermal Printers",
+            "Printers::Barcode Printers",
+            "Scanners",
+            "Laptops",
+            "Accessories",
+            "Accessories::Power Cables",
+            "Accessories::VGA Cables",
+            "Accessories::Mouse",
+            "Accessories::Keyboard",
+            "Accessories::Mouse & Keyboard Set",
+            "Accessories::Adapters & Chargers",
+            "Accessories::USB Flash Drives",
+            "Accessories::Other Accessories"
+        ];
     }
 }
 

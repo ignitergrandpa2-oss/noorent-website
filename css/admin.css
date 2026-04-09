@@ -942,3 +942,105 @@ input[type="file"] {
         padding: 1rem;
     }
 }
+
+/* --- Category Tree Styles (Futuristic) --- */
+.category-tree {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.tree-main-node {
+    margin-bottom: 0.8rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+    overflow: hidden;
+}
+
+.tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tree-header:hover {
+    background: rgba(79, 142, 247, 0.1);
+}
+
+.tree-header.active {
+    background: rgba(79, 142, 247, 0.15);
+    border-bottom: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.tree-title {
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tree-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.tree-actions button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.tree-actions button:hover {
+    color: #fff;
+}
+
+.tree-actions button.delete-btn:hover {
+    color: #ef4444;
+}
+
+.tree-sub-nodes {
+    padding: 0;
+    display: none;
+    background: rgba(0,0,0,0.1);
+}
+
+.tree-header.active + .tree-sub-nodes {
+    display: block;
+}
+
+.tree-sub-node {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    font-size: 0.9rem;
+    color: var(--text-main);
+    position: relative;
+}
+
+.tree-sub-node::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    width: 0.5rem;
+    height: 1px;
+    background: var(--text-muted);
+}
+
+.tree-sub-node:last-child {
+    border-bottom: none;
+}

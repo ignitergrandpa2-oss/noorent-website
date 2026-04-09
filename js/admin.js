@@ -129,27 +129,52 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateCategoryFilter() {
         const filterSelect = document.getElementById('admin-category-filter');
-        const categoryDatalist = document.getElementById('category-list');
+        const mainCatSelect = document.getElementById('prod-main-category');
+        const subCatSelect = document.getElementById('prod-sub-category');
         
+        // 1. Get unique Main Categories
+        const mainCategories = [...new Set(categoriesList.map(cat => cat.split('::')[0]))].sort();
+        
+        // 2. Update Dashboard Filter
         if (filterSelect) {
             const currentValue = filterSelect.value;
             filterSelect.innerHTML = '<option value="all">All Categories</option>';
             categoriesList.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat;
-                opt.textContent = cat;
+                opt.textContent = cat.includes('::') ? `─ ${cat.split('::')[1]}` : cat;
+                if (!cat.includes('::')) opt.style.fontWeight = 'bold';
                 filterSelect.appendChild(opt);
             });
             if (categoriesList.includes(currentValue)) filterSelect.value = currentValue;
         }
 
-        if (categoryDatalist) {
-            categoryDatalist.innerHTML = '';
-            categoriesList.forEach(cat => {
+        // 3. Update Product Modal Main Category Select
+        if (mainCatSelect) {
+            mainCatSelect.innerHTML = '<option value="" disabled selected>Select Main Category</option>';
+            mainCategories.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat;
-                categoryDatalist.appendChild(opt);
+                opt.textContent = cat;
+                mainCatSelect.appendChild(opt);
             });
+
+            // Handle Subcategory Dependent Dropdown
+            mainCatSelect.onchange = () => {
+                const selectedMain = mainCatSelect.value;
+                subCatSelect.innerHTML = '<option value="">None / General</option>';
+                
+                const subs = categoriesList
+                    .filter(c => c.startsWith(selectedMain + '::'))
+                    .map(c => c.split('::')[1]);
+                
+                subs.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.textContent = sub;
+                    subCatSelect.appendChild(opt);
+                });
+            };
         }
     }
 
@@ -197,7 +222,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="font-weight: 600;">${p.name} ${homeBadge}</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">${p.brand || ''} ${p.modelNumber || ''}</div>
                 </td>
-                <td data-label="Category"><span style="background: rgba(79, 142, 247, 0.1); color: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${p.category || 'General'}</span></td>
+                <td data-label="Category">
+                    <span style="background: rgba(79, 142, 247, 0.1); color: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                        ${(p.category || 'General').split('::').pop()}
+                    </span>
+                </td>
                 <td data-label="Price">${p.showPrice && p.price ? p.price : '<span style="color: var(--text-muted);">Hidden</span>'}</td>
                 <td data-label="Stock">${stockStatus}</td>
                 <td data-label="Actions">
@@ -473,42 +502,110 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categoryForm = document.getElementById('category-form');
 
     document.getElementById('btn-manage-categories').addEventListener('click', () => {
-        renderCategoryList();
+        renderCategoryTree();
         categoryModal.classList.add('active');
     });
 
     categoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const nameInput = document.getElementById('new-category-name');
-        const name = nameInput.value.trim();
+        const mainInput = document.getElementById('new-category-main');
+        const subInput = document.getElementById('new-category-sub');
         
-        if (name && !categoriesList.includes(name)) {
-            categoriesList.push(name);
+        const main = mainInput.value.trim();
+        const sub = subInput.value.trim();
+        
+        if (!main) return;
+
+        let fullName = sub ? `${main}::${sub}` : main;
+        
+        if (!categoriesList.includes(fullName)) {
+            // If sub was provided, ensure main exists too
+            if (sub && !categoriesList.includes(main)) {
+                categoriesList.push(main);
+            }
+            
+            categoriesList.push(fullName);
+            categoriesList.sort(); // Keep them neat
+            
             await updateCategories(categoriesList);
-            renderCategoryList();
+            renderCategoryTree();
             updateCategoryFilter();
-            nameInput.value = '';
+            
+            subInput.value = '';
             showToast("Category added!");
+        } else {
+            alert("This category already exists.");
         }
     });
 
-    function renderCategoryList() {
-        const list = document.getElementById('admin-category-list-items');
-        list.innerHTML = '';
-        categoriesList.forEach(cat => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${cat}</span><button class="action-btn delete" data-cat="${cat}"><i class="fas fa-trash-alt"></i></button>`;
-            list.appendChild(li);
+    function renderCategoryTree() {
+        const container = document.getElementById('admin-category-tree');
+        container.innerHTML = '';
+        
+        const mainCategories = [...new Set(categoriesList.map(cat => cat.split('::')[0]))].sort();
+        
+        mainCategories.forEach(main => {
+            const mainNode = document.createElement('div');
+            mainNode.className = 'tree-main-node';
+            
+            const subCategories = categoriesList
+                .filter(c => c.startsWith(main + '::'))
+                .map(c => c.split('::')[1]);
+                
+            mainNode.innerHTML = `
+                <div class="tree-header">
+                    <div class="tree-title"><i class="fas fa-chevron-right"></i> ${main}</div>
+                    <div class="tree-actions">
+                        <button class="delete-btn" data-cat="${main}" title="Delete Main Category & All Subs"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+                <div class="tree-sub-nodes">
+                    ${subCategories.map(sub => `
+                        <div class="tree-sub-node">
+                            <span>${sub}</span>
+                            <div class="tree-actions">
+                                <button class="delete-btn" data-cat="${main}::${sub}" title="Delete Subcategory"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${subCategories.length === 0 ? '<div class="tree-sub-node" style="font-style:italic; opacity:0.5;">No subcategories</div>' : ''}
+                </div>
+            `;
+            
+            // Toggle Expansion
+            const header = mainNode.querySelector('.tree-header');
+            header.addEventListener('click', (e) => {
+                if (e.target.closest('.tree-actions')) return;
+                header.classList.toggle('active');
+                const icon = header.querySelector('i');
+                icon.className = header.classList.contains('active') ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+            });
+            
+            container.appendChild(mainNode);
         });
 
-        list.querySelectorAll('.delete').forEach(btn => {
+        // Delete Logic
+        container.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const cat = e.currentTarget.getAttribute('data-cat');
-                if (confirm(`Delete category "${cat}"?`)) {
-                    categoriesList = categoriesList.filter(c => c !== cat);
+                e.stopPropagation();
+                const catToDelete = btn.getAttribute('data-cat');
+                const isMain = !catToDelete.includes('::');
+                
+                const msg = isMain 
+                    ? `Delete "${catToDelete}" and ALL its subcategories?` 
+                    : `Delete subcategory "${catToDelete.split('::')[1]}"?`;
+                    
+                if (confirm(msg)) {
+                    if (isMain) {
+                        categoriesList = categoriesList.filter(c => !c.startsWith(catToDelete));
+                    } else {
+                        categoriesList = categoriesList.filter(c => c !== catToDelete);
+                    }
+                    
                     await updateCategories(categoriesList);
-                    renderCategoryList();
+                    renderCategoryTree();
                     updateCategoryFilter();
+                    showToast("Category removed");
                 }
             });
         });
@@ -622,7 +719,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('prod-name').value = p.name;
                 document.getElementById('prod-brand').value = p.brand || '';
                 document.getElementById('prod-model').value = p.modelNumber || '';
-                document.getElementById('prod-category').value = p.category;
+                
+                // Split Category Logic
+                const catParts = (p.category || '').split('::');
+                const mainCat = catParts[0];
+                const subCat = catParts[1] || '';
+                
+                const mainSelect = document.getElementById('prod-main-category');
+                const subSelect = document.getElementById('prod-sub-category');
+                
+                mainSelect.value = mainCat;
+                mainSelect.onchange(); // Trigger sub-cat population
+                subSelect.value = subCat;
+
                 document.getElementById('prod-price').value = p.price || '';
                 document.getElementById('prod-show-price').checked = p.showPrice;
                 document.getElementById('prod-warranty').value = p.warranty || '';
@@ -642,7 +751,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: document.getElementById('prod-name').value.trim(),
             brand: document.getElementById('prod-brand').value.trim(),
             modelNumber: document.getElementById('prod-model').value.trim(),
-            category: document.getElementById('prod-category').value.trim(),
+            
+            // Join Category Logic
+            category: (() => {
+                const main = document.getElementById('prod-main-category').value;
+                const sub = document.getElementById('prod-sub-category').value;
+                return sub ? `${main}::${sub}` : main;
+            })(),
+            
             price: document.getElementById('prod-price').value.trim(),
             showPrice: document.getElementById('prod-show-price').checked,
             warranty: document.getElementById('prod-warranty').value.trim(),
