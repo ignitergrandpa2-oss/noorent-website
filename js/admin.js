@@ -258,8 +258,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             categoriesList.forEach(cat => {
                 const opt = document.createElement('option');
                 opt.value = cat;
-                opt.textContent = cat.includes('::') ? `─ ${cat.split('::')[1]}` : cat;
-                if (!cat.includes('::')) opt.style.fontWeight = 'bold';
+                if (!cat.includes('::')) {
+                    opt.textContent = cat;
+                    opt.style.fontWeight = 'bold';
+                } else {
+                    const sub = cat.split('::')[1];
+                    if (sub.includes(' - ')) {
+                        opt.textContent = `　　└─ ${sub.split(' - ')[1]}`;
+                        opt.style.fontSize = '0.9rem';
+                        opt.style.opacity = '0.8';
+                    } else {
+                        opt.textContent = `─ ${sub}`;
+                    }
+                }
                 filterSelect.appendChild(opt);
             });
             if (categoriesList.includes(currentValue)) filterSelect.value = currentValue;
@@ -287,7 +298,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 subs.forEach(sub => {
                     const opt = document.createElement('option');
                     opt.value = sub;
-                    opt.textContent = sub;
+                    if (sub.includes(' - ')) {
+                        opt.textContent = `└─ ${sub.split(' - ')[1]}`;
+                        opt.style.paddingLeft = '1rem';
+                    } else {
+                        opt.textContent = sub;
+                    }
                     subCatSelect.appendChild(opt);
                 });
             };
@@ -676,14 +692,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
                 <div class="tree-sub-nodes">
-                    ${subCategories.map(sub => `
-                        <div class="tree-sub-node">
-                            <span>${sub}</span>
-                            <div class="tree-actions">
-                                <button class="delete-btn" data-cat="${main}::${sub}" title="Delete Subcategory"><i class="fas fa-times"></i></button>
+                    ${subCategories.map(sub => {
+                        const isSubSub = sub.includes(' - ');
+                        const displayName = isSubSub ? sub.split(' - ')[1] : sub;
+                        const indentStyle = isSubSub ? 'margin-left: 1.5rem; opacity: 0.8; font-size: 0.9em; border-left: 1px solid var(--border); padding-left: 0.8rem;' : '';
+                        const icon = isSubSub ? '<i class="fas fa-minus" style="font-size: 0.7em; margin-right: 5px;"></i>' : '';
+                        
+                        return `
+                            <div class="tree-sub-node" style="${indentStyle}">
+                                <span>${icon}${displayName}</span>
+                                <div class="tree-actions">
+                                    <button class="delete-btn" data-cat="${main}::${sub}" title="Delete Category"><i class="fas fa-times"></i></button>
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                     ${subCategories.length === 0 ? '<div class="tree-sub-node" style="font-style:italic; opacity:0.5;">No subcategories</div>' : ''}
                 </div>
             `;

@@ -182,7 +182,24 @@ export async function getCategories(forceRefresh = false) {
                 "Accessories::Mouse & Keyboard Set",
                 "Accessories::Adapters & Chargers",
                 "Accessories::USB Flash Drives",
-                "Accessories::Other Accessories"
+                "Accessories::Other Accessories",
+                "Accessories::Adapters & Chargers - Adapter 12v 2a",
+                "Accessories::Adapters & Chargers - Adapter 12v 3a",
+                "Accessories::Adapters & Chargers - Adapter 12v 4a",
+                "Accessories::Adapters & Chargers - Adapter 12v 5A",
+                "Accessories::Adapters & Chargers - Adapter 12v 8a",
+                "Accessories::Adapters & Chargers - Adapter 48v, 54v",
+                "Accessories::Adapters & Chargers - Adapter Thermal 24v",
+                "Accessories::Adapters & Chargers - Adapter Zebra 24v",
+                "Accessories::Adapters & Chargers - Adapter 5v",
+                "Accessories::Adapters & Chargers - Adapter Hp 130w",
+                "Accessories::Adapters & Chargers - Adapter Dell XPS",
+                "Printers::LaserJet Printers - Laserjet Printer 1136",
+                "Printers::LaserJet Printers - Laserjet Printer 402",
+                "Printers::LaserJet Printers - Laserjet Printer m15w",
+                "Printers::LaserJet Printers - Laserjet Printer 1505",
+                "Printers::LaserJet Printers - Laserjet Printer Canon 6030",
+                "Printers::LaserJet Printers - Laserjet Printer E50145"
             ];
         } else {
             categoriesCache = data.map(c => c.name);
@@ -208,7 +225,24 @@ export async function getCategories(forceRefresh = false) {
             "Accessories::Mouse & Keyboard Set",
             "Accessories::Adapters & Chargers",
             "Accessories::USB Flash Drives",
-            "Accessories::Other Accessories"
+            "Accessories::Other Accessories",
+            "Accessories::Adapters & Chargers - Adapter 12v 2a",
+            "Accessories::Adapters & Chargers - Adapter 12v 3a",
+            "Accessories::Adapters & Chargers - Adapter 12v 4a",
+            "Accessories::Adapters & Chargers - Adapter 12v 5A",
+            "Accessories::Adapters & Chargers - Adapter 12v 8a",
+            "Accessories::Adapters & Chargers - Adapter 48v, 54v",
+            "Accessories::Adapters & Chargers - Adapter Thermal 24v",
+            "Accessories::Adapters & Chargers - Adapter Zebra 24v",
+            "Accessories::Adapters & Chargers - Adapter 5v",
+            "Accessories::Adapters & Chargers - Adapter Hp 130w",
+            "Accessories::Adapters & Chargers - Adapter Dell XPS",
+            "Printers::LaserJet Printers - Laserjet Printer 1136",
+            "Printers::LaserJet Printers - Laserjet Printer 402",
+            "Printers::LaserJet Printers - Laserjet Printer m15w",
+            "Printers::LaserJet Printers - Laserjet Printer 1505",
+            "Printers::LaserJet Printers - Laserjet Printer Canon 6030",
+            "Printers::LaserJet Printers - Laserjet Printer E50145"
         ];
     }
 }
