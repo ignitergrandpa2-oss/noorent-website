@@ -416,11 +416,18 @@ export async function getUserProfile(providedUser = null) {
         const user = providedUser || (await supabase.auth.getUser()).data.user;
         if (!user) return null;
 
-        const { data, error } = await supabase
+        // Add a timeout to prevent hanging on slow connections
+        const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
+
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
+        );
+
+        const { data, error } = await Promise.race([profilePromise, timeoutPromise]);
 
         if (error) {
             console.warn("Profile fetch error:", error.message);
@@ -432,6 +439,7 @@ export async function getUserProfile(providedUser = null) {
         return null;
     }
 }
+
 
 /**
  * Fetches Services

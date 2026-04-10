@@ -37,22 +37,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         try {
             if (session) {
-                // Use session.user directly to avoid an extra getUser() call
-                // Fallback to a default admin profile if the database fetch fails
-                currentUser = await getUserProfile(session.user) || { 
-                    role: 'admin', 
-                    display_name: session.user.email.split('@')[0], 
-                    email: session.user.email 
-                };
-                
-                console.log("Logged in as:", currentUser.display_name, "(Role:", currentUser.role + ")");
+                // Fetch profile but don't let it block the UI transition if it's slow
+                getUserProfile(session.user).then(profile => {
+                    if (profile) {
+                        currentUser = profile;
+                        console.log("Profile loaded:", currentUser.display_name);
+                        // Refresh UI with role if already shown
+                        if (isInitialized) showDashboard(); 
+                    }
+                }).catch(err => console.warn("Background profile fetch failed:", err));
 
+                // Set a default profile immediately to unblock UI
+                if (!currentUser) {
+                    currentUser = { 
+                        role: 'admin', 
+                        display_name: session.user.email.split('@')[0], 
+                        email: session.user.email 
+                    };
+                }
+                
                 if (!isInitialized) {
+                    console.log("Transitioning to dashboard...");
                     showDashboard();
                     isInitialized = true;
                 }
             } else {
                 console.log("No session detected, showing login.");
+                currentUser = null;
                 isInitialized = false;
                 showLogin();
                 if (productsSubscriptionCleanup) {
@@ -66,9 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 authError.textContent = "Initialization failed: " + err.message;
                 authError.style.display = 'block';
             }
-            // If we have a session but initialization failed, try to show the dashboard anyway
             if (session && !isInitialized) {
-                console.warn("Attempting dashboard recovery...");
                 showDashboard();
                 isInitialized = true;
             }
@@ -80,18 +89,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Check current session immediately in case event listener was too late
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session && !isInitialized) {
-            console.log("Active session found on load.");
-            // We don't need to manually call showDashboard here because onAuthStateChange 
-            // will fire with 'INITIAL_SESSION' event.
+    // Proactive session check for faster load
+    async function checkSession() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && !isInitialized) {
+                console.log("Proactive session recovery triggered.");
+                // onAuthStateChange will also fire, but we ensure it happens here if needed
+            }
+        } catch (err) {
+            console.error("Session check failed", err);
         }
-    });
+    }
+    checkSession();
+
 
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent any event bubbling that might trigger reload
+            
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const submitBtn = authForm.querySelector('button');
@@ -101,9 +118,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
                 authError.style.display = 'none';
                 
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                console.log("Attempting sign in for:", email);
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                
                 if (error) throw error;
+                
+                if (!data.session) {
+                    throw new Error("No session returned. Please check if your account is confirmed.");
+                }
+                
+                console.log("Sign in successful, waiting for auth state change notification...");
+                // Note: The onAuthStateChange listener will handle the UI transition to dashboard
+                
             } catch (err) {
+                console.error("Login attempt failed:", err.message);
                 authError.textContent = err.message;
                 authError.style.display = 'block';
                 submitBtn.disabled = false;
@@ -111,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
 
     function showDashboard() {
         loginContainer.style.display = 'none';
