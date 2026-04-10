@@ -29,25 +29,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnLogout = document.getElementById('btn-logout');
     const mobileLogout = document.getElementById('mobile-logout');
 
-    // --- Monitor Auth State (Supabase) ---
-    console.log("Setting up Auth Listener...");
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log("Auth Event:", event, session ? "Session Active" : "No Session");
+    // --- Unified Auth State Machine ---
+    async function syncAuthState(session) {
         const submitBtn = authForm ? authForm.querySelector('button') : null;
         
         try {
             if (session) {
-                // Fetch profile but don't let it block the UI transition if it's slow
-                getUserProfile(session.user).then(profile => {
-                    if (profile) {
-                        currentUser = profile;
-                        console.log("Profile loaded:", currentUser.display_name);
-                        // Refresh UI with role if already shown
-                        if (isInitialized) showDashboard(); 
-                    }
-                }).catch(err => console.warn("Background profile fetch failed:", err));
-
-                // Set a default profile immediately to unblock UI
+                console.log("Auth Status: Logged In");
+                
+                // 1. Set immediate fallback profile to unblock UI
                 if (!currentUser) {
                     currentUser = { 
                         role: 'admin', 
@@ -55,14 +45,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         email: session.user.email 
                     };
                 }
-                
+
+                // 2. Transition UI immediately
                 if (!isInitialized) {
-                    console.log("Transitioning to dashboard...");
                     showDashboard();
                     isInitialized = true;
                 }
+
+                // 3. Background profile refresh
+                getUserProfile(session.user).then(profile => {
+                    if (profile) {
+                        currentUser = profile;
+                        console.log("Profile refined:", currentUser.role);
+                        updateRoleVisibility(); // New helper to refresh UI if role changed
+                    }
+                }).catch(err => console.warn("Background profile fetch failed:", err));
+
             } else {
-                console.log("No session detected, showing login.");
+                console.log("Auth Status: Logged Out");
                 currentUser = null;
                 isInitialized = false;
                 showLogin();
@@ -71,43 +71,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     productsSubscriptionCleanup = null;
                 }
             }
-        } catch (err) {
-            console.error("Critical Auth Error:", err);
-            if (authError) {
-                authError.textContent = "Initialization failed: " + err.message;
-                authError.style.display = 'block';
-            }
-            if (session && !isInitialized) {
-                showDashboard();
-                isInitialized = true;
-            }
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
             }
         }
+    }
+
+    // --- Monitor Auth State ---
+    supabase.auth.onAuthStateChange((event, session) => {
+        console.log("Auth Event:", event);
+        syncAuthState(session);
     });
 
-    // Proactive session check for faster load
-    async function checkSession() {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session && !isInitialized) {
-                console.log("Proactive session recovery triggered.");
-                // onAuthStateChange will also fire, but we ensure it happens here if needed
-            }
-        } catch (err) {
-            console.error("Session check failed", err);
-        }
-    }
-    checkSession();
+    // Initial check (handles page refreshes)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) syncAuthState(session);
+    });
 
-
+    // --- Login Form Handler ---
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            e.stopPropagation(); // Prevent any event bubbling that might trigger reload
+            e.stopPropagation();
             
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -118,20 +105,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
                 authError.style.display = 'none';
                 
-                console.log("Attempting sign in for:", email);
+                // SAFETY TIMEOUT: If Supabase takes > 10s, reset the button to prevent permanent hang
+                const safetyTimeout = setTimeout(() => {
+                    if (submitBtn.disabled) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
+                        authError.textContent = "Request timed out. Please check your connection and try again.";
+                        authError.style.display = 'block';
+                    }
+                }, 10000);
+
+                console.log("Signing in...");
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 
+                clearTimeout(safetyTimeout);
                 if (error) throw error;
                 
-                if (!data.session) {
-                    throw new Error("No session returned. Please check if your account is confirmed.");
+                if (data.session) {
+                    console.log("Sign-in data received, transitioning...");
+                    syncAuthState(data.session);
                 }
                 
-                console.log("Sign in successful, waiting for auth state change notification...");
-                // Note: The onAuthStateChange listener will handle the UI transition to dashboard
-                
             } catch (err) {
-                console.error("Login attempt failed:", err.message);
+                console.error("Login failed:", err.message);
                 authError.textContent = err.message;
                 authError.style.display = 'block';
                 submitBtn.disabled = false;
@@ -141,24 +137,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
+
     function showDashboard() {
-        loginContainer.style.display = 'none';
-        adminWrapper.style.display = 'flex';
+        loginContainer.style.opacity = '0';
+        setTimeout(() => {
+            loginContainer.style.display = 'none';
+            adminWrapper.style.display = 'flex';
+            adminWrapper.style.opacity = '0';
+            setTimeout(() => {
+                adminWrapper.style.opacity = '1';
+                updateRoleVisibility();
+                initDashboard();
+            }, 50);
+        }, 500);
+    }
+
+    function showLogin() {
+        adminWrapper.style.opacity = '0';
+        setTimeout(() => {
+            adminWrapper.style.display = 'none';
+            loginContainer.style.display = 'flex';
+            loginContainer.style.opacity = '0';
+            setTimeout(() => {
+                loginContainer.style.opacity = '1';
+            }, 50);
+        }, 500);
+    }
+
+    function updateRoleVisibility() {
+        if (!currentUser) return;
         
         // Handle Role-Based UI
         const settingsTab = document.querySelector('[data-tab="tab-settings"]');
         const backupTab = document.querySelector('[data-tab="tab-backup"]');
         
-        if (currentUser && currentUser.role === 'client_admin') {
+        if (currentUser.role === 'client_admin') {
             if (settingsTab) settingsTab.style.display = 'none';
             if (backupTab) backupTab.style.display = 'none';
         } else {
             if (settingsTab) settingsTab.style.display = 'block';
             if (backupTab) backupTab.style.display = 'block';
         }
-
-        initDashboard();
     }
+
 
     function showLogin() {
         adminWrapper.style.display = 'none';

@@ -52,10 +52,17 @@ export async function getBusinessInfo(forceRefresh = false) {
     }
 
     try {
-        const { data, error } = await supabase
-            .from('settings')
+        // Add timeout
+        const fetchPromise = supabase
+            .from('business_info')
             .select('*')
             .single();
+        
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Business info fetch timeout")), 5000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             
         if (error) {
             if (error.code === 'PGRST116') {
@@ -158,11 +165,19 @@ export async function getCategories(forceRefresh = false) {
     }
     
     try {
-        const { data, error } = await supabase
+        // Add timeout
+        const fetchPromise = supabase
             .from('categories')
             .select('name');
+        
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Categories fetch timeout")), 5000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             
         if (error) throw error;
+
         
         // If no categories in DB, return defaults
         if (!data || data.length === 0) {
