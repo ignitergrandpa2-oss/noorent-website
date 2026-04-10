@@ -43,9 +43,10 @@
             </div>
             <ul class="admin-nav">
                 <li><a href="#" class="active" data-tab="tab-dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#" data-tab="tab-orders"><i class="fas fa-shopping-bag"></i> Orders</a></li>
                 <li><a href="#" data-tab="tab-products"><i class="fas fa-box"></i> Products</a></li>
                 <li><a href="#" data-tab="tab-settings"><i class="fas fa-cog"></i> Site Settings</a></li>
-                <li><a href="#" data-tab="tab-backup"><i class="fas fa-database"></i> Backup / Restore</a></li>
+                <li><a href="#" data-tab="tab-backup"><i class="fas fa-database"></i> Backup</a></li>
             </ul>
             <div class="sidebar-footer">
                 <button id="btn-logout" class="btn btn-outline" style="width: 100%;">Logout</button>
@@ -56,7 +57,8 @@
         <!-- Mobile Bottom Nav -->
         <nav class="mobile-nav">
             <a href="#" class="active" data-tab="tab-dashboard"><i class="fas fa-chart-line"></i><span>Home</span></a>
-            <a href="#" data-tab="tab-products"><i class="fas fa-box"></i><span>Products</span></a>
+            <a href="#" data-tab="tab-orders"><i class="fas fa-shopping-bag"></i><span>Orders</span></a>
+            <a href="#" data-tab="tab-products"><i class="fas fa-box"></i><span>Items</span></a>
             <a href="#" data-tab="tab-settings"><i class="fas fa-cog"></i><span>Settings</span></a>
             <a href="#" id="mobile-logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
         </nav>
@@ -74,17 +76,17 @@
                 <div id="tab-dashboard" class="tab-content active">
                     <div class="stat-grid">
                         <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+                            <div class="stat-info">
+                                <h3 id="stat-total-orders">0</h3>
+                                <p>Recent Orders</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-box"></i></div>
                             <div class="stat-info">
                                 <h3 id="stat-total-products">0</h3>
                                 <p>Total Products</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon" style="color: var(--success);"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-info">
-                                <h3 id="stat-instock">0</h3>
-                                <p>In Stock</p>
                             </div>
                         </div>
                     </div>
@@ -92,8 +94,60 @@
                     <div class="welcome-banner">
                         <i class="fas fa-info-circle" style="color: var(--accent); font-size: 1.5rem;"></i>
                         <div>
-                            <h4>Welcome to your Admin Dashboard</h4>
-                            <p>Here you can manage your products, update prices, and edit contact information without touching code. Remember to <strong>export a backup</strong> periodically from the Backup tab.</p>
+                            <h4>Welcome to your modern Tech Store Admin</h4>
+                            <p>Manage products, track orders, and monitor your business performance in real-time.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Orders -->
+                <div id="tab-orders" class="tab-content">
+                    <div class="flex-between admin-action-bar" style="margin-bottom: 2rem;">
+                        <div>
+                            <h3>Customer Orders</h3>
+                            <p style="color:var(--text-muted); font-size: 0.9rem;">Track all WhatsApp and Direct order submissions.</p>
+                        </div>
+                        <div class="header-actions-group">
+                             <select id="admin-order-filter" class="admin-select">
+                                <option value="all">All Orders</option>
+                                <option value="pending">Pending</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-orders-list">
+                                <!-- Orders mapped here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Order Detail Modal -->
+                <div id="order-detail-modal" class="modal">
+                    <div class="modal-content" style="max-width: 700px; padding: 2rem;">
+                        <span class="close-modal" id="close-order-modal">&times;</span>
+                        <h3 id="order-modal-title">Order Details</h3>
+                        <div id="order-detail-content" style="margin-top: 1.5rem;">
+                            <!-- Details injected here -->
+                        </div>
+                        <div class="modal-actions" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem; justify-content: flex-end; gap: 1rem;">
+                            <button class="btn btn-outline" id="btn-mark-contacted">Mark as Contacted</button>
+                            <button class="btn btn-primary" id="btn-mark-completed">Mark as Completed</button>
                         </div>
                     </div>
                 </div>
@@ -315,7 +369,7 @@
                     </div>
 
                     <div class="form-section-group">
-                        <h4 class="form-group-title"><i class="fas fa-tags"></i> Categorization</h4>
+                        <h4 class="form-group-title"><i class="fas fa-tags"></i> Categorization & Visibility</h4>
                         <div class="form-group">
                             <label>Main Category <span style="color: var(--accent);">*</span></label>
                             <select id="prod-main-category" required style="width: 100%; border: 1px solid var(--border); padding: 0.8rem; border-radius: 8px; background: var(--secondary); color: var(--text-main); margin-bottom: 1rem;">
@@ -329,9 +383,15 @@
                             </select>
                         </div>
 
-                        <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
-                            <input type="checkbox" id="prod-homepage" checked style="width: 20px; height: 20px; margin: 0;">
-                            <label for="prod-homepage" style="margin: 0; cursor: pointer; color: var(--text-main); font-weight: 500;">Show on Homepage?</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                            <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <input type="checkbox" id="prod-homepage" checked style="width: 18px; height: 18px; margin: 0;">
+                                <label for="prod-homepage" style="margin: 0; cursor: pointer; color: var(--text-main); font-size: 0.85rem;">Show on Home</label>
+                            </div>
+                            <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(79, 142, 247, 0.05); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--accent);">
+                                <input type="checkbox" id="prod-featured" style="width: 18px; height: 18px; margin: 0;">
+                                <label for="prod-featured" style="margin: 0; cursor: pointer; color: var(--accent-glow); font-size: 0.85rem; font-weight: 600;">Featured Deal</label>
+                            </div>
                         </div>
                     </div>
                 </div>

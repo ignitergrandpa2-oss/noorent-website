@@ -9,7 +9,9 @@ import {
     getCategories, 
     updateCategories,
     subscribeToProducts,
-    getUserProfile
+    getUserProfile,
+    getOrders,
+    updateOrderStatus
 } from './data.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -246,8 +248,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateCategoryFilter();
         populateSettingsForm();
         
-        productsSubscriptionCleanup = subscribeToProducts((products) => {
-            productsList = products;
+        // Initial Fetch
+        const [products, orders] = await Promise.all([
+            getProducts(),
+            getOrders()
+        ]);
+        
+        productsList = products;
+        updateStats(orders);
+        renderProductsTable();
+        renderOrdersTable(orders);
+
+        productsSubscriptionCleanup = subscribeToProducts((updatedProducts) => {
+            productsList = updatedProducts;
             updateStats();
             renderProductsTable();
         });
@@ -338,10 +351,135 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function updateStats() {
+    function updateStats(orders = []) {
         document.getElementById('stat-total-products').textContent = productsList.length;
-        document.getElementById('stat-instock').textContent = productsList.filter(p => p.availability).length;
+        document.getElementById('stat-total-orders').textContent = orders.length;
     }
+
+    // --- Orders Management ---
+    async function renderOrdersTable(orders) {
+        if (!orders) orders = await getOrders();
+        const tbody = document.getElementById('admin-orders-list');
+        const filter = document.getElementById('admin-order-filter')?.value || 'all';
+        
+        tbody.innerHTML = '';
+        
+        let filtered = orders.filter(o => filter === 'all' || o.status === filter);
+        
+        // Sort by newest
+        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        filtered.forEach(o => {
+            const tr = document.createElement('tr');
+            const date = new Date(o.created_at).toLocaleDateString();
+            const sourceBadge = o.source === 'whatsapp' 
+                ? '<span class="badge" style="background: #25D366; color:white;"><i class="fab fa-whatsapp"></i> WA</span>' 
+                : '<span class="badge" style="background: var(--accent); color:white;"><i class="fas fa-globe"></i> Direct</span>';
+            
+            const statusClass = `status-${o.status}`; // You might need to add these classes to admin.css
+            
+            tr.innerHTML = `
+                <td>#${o.id}</td>
+                <td>
+                    <div style="font-weight:600;">${o.customer_name}</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">${o.customer_phone}</div>
+                </td>
+                <td>Rs. ${o.total_amount.toLocaleString()}</td>
+                <td>${sourceBadge}</td>
+                <td><span class="order-status-pill ${o.status}">${o.status}</span></td>
+                <td>${date}</td>
+                <td>
+                    <button class="action-btn view-order" data-id="${o.id}"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn update-status" data-id="${o.id}"><i class="fas fa-sync"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.view-order').forEach(btn => btn.addEventListener('click', () => {
+            const order = orders.find(o => o.id == btn.getAttribute('data-id'));
+            openOrderDetail(order);
+        }));
+
+        tbody.querySelectorAll('.update-status').forEach(btn => btn.addEventListener('click', async () => {
+             const id = btn.getAttribute('data-id');
+             const order = orders.find(o => o.id == id);
+             const nextStatus = order.status === 'pending' ? 'contacted' : (order.status === 'contacted' ? 'completed' : 'pending');
+             if (confirm(`Change status to ${nextStatus}?`)) {
+                 await updateOrderStatus(id, nextStatus);
+                 showToast("Status updated");
+                 initDashboard(); // Refresh
+             }
+        }));
+    }
+
+    function openOrderDetail(o) {
+        const modal = document.getElementById('order-detail-modal');
+        const content = document.getElementById('order-detail-content');
+        
+        content.innerHTML = `
+            <div class="order-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h4>Customer Information</h4>
+                    <p><strong>Name:</strong> ${o.customer_name}</p>
+                    <p><strong>Phone:</strong> ${o.customer_phone}</p>
+                    <p><strong>Address:</strong> ${o.customer_address || 'Not provided'}</p>
+                </div>
+                <div>
+                    <h4>Order Info</h4>
+                    <p><strong>Order ID:</strong> #${o.id}</p>
+                    <p><strong>Source:</strong> ${o.source}</p>
+                    <p><strong>Date:</strong> ${new Date(o.created_at).toLocaleString()}</p>
+                </div>
+            </div>
+            <div style="margin-top: 2rem;">
+                <h4>Product List</h4>
+                <table style="width:100%; margin-top: 1rem; border-collapse: collapse;">
+                    <thead style="background: rgba(255,255,255,0.05);">
+                        <tr>
+                            <th style="padding: 10px; text-align: left;">Item</th>
+                            <th style="padding: 10px; text-align: center;">Qty</th>
+                            <th style="padding: 10px; text-align: right;">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${o.items.map(i => `
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid var(--border);">${i.name}</td>
+                                <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: center;">${i.qty}</td>
+                                <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right;">${i.price}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="padding: 10px; text-align: right; font-weight: 700;">Total</td>
+                            <td style="padding: 10px; text-align: right; font-weight: 700; color: var(--accent);">Rs. ${o.total_amount.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+        
+        document.getElementById('btn-mark-contacted').onclick = async () => {
+            await updateOrderStatus(o.id, 'contacted');
+            modal.style.display = 'none';
+            initDashboard();
+        };
+
+        document.getElementById('btn-mark-completed').onclick = async () => {
+            await updateOrderStatus(o.id, 'completed');
+            modal.style.display = 'none';
+            initDashboard();
+        };
+    }
+    
+    const closeOrderBtn = document.getElementById('close-order-modal');
+    if (closeOrderBtn) closeOrderBtn.onclick = () => document.getElementById('order-detail-modal').style.display = 'none';
+
+    document.getElementById('admin-order-filter')?.addEventListener('change', () => renderOrdersTable());
 
     // --- Products Management ---
     function renderProductsTable() {
@@ -898,6 +1036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('prod-desc').value = p.description;
                 document.getElementById('prod-stock').value = p.stockStatus || "In Stock";
                 document.getElementById('prod-homepage').checked = p.showOnHomepage;
+                document.getElementById('prod-featured').checked = p.isFeatured || false;
                 productImages = p.images || (p.image ? [p.image] : []);
             }
         }
@@ -926,7 +1065,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             images: productImages,
             image: productImages[0] || '', // backward compat
             stockStatus: document.getElementById('prod-stock').value,
-            showOnHomepage: document.getElementById('prod-homepage').checked
+            showOnHomepage: document.getElementById('prod-homepage').checked,
+            isFeatured: document.getElementById('prod-featured').checked
         };
 
         try {

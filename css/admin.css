@@ -23,6 +23,57 @@ body {
     transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
+/* Order Status Pills */
+.order-status-pill {
+    padding: 6px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    display: inline-block;
+}
+
+.order-status-pill.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.order-status-pill.contacted {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.order-status-pill.completed {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+/* Order Grid (Modal) */
+.order-grid h4 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.order-grid p {
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+/* Mobile responsive orders table */
+@media (max-width: 768px) {
+    .order-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+}
+, transform 0.5s ease;
+}
+
 .auth-box {
     background: var(--secondary);
     border: 1px solid var(--border);

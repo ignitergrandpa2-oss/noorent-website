@@ -437,6 +437,43 @@ export async function addLead(leadData) {
     }
 }
 
+/**
+ * Fetch all orders for the admin
+ */
+export async function getOrders() {
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        return [];
+    }
+}
+
+/**
+ * Update the status of an order
+ */
+export async function updateOrderStatus(id, status) {
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .update({ status: status })
+            .eq('id', id)
+            .select();
+            
+        if (error) throw error;
+        return data[0];
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        throw error;
+    }
+}
+
 // Map Supabase format to internal App format
 function mapSupabaseProduct(item) {
     return {

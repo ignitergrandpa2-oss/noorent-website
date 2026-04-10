@@ -40,33 +40,33 @@
                     <div class="search-results" id="search-results"></div>
                 </div>
 
+                <div class="cart-trigger" id="cart-trigger">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cart-count">0</span>
+                </div>
+
                 <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Mode">
                     <i class="fas fa-moon"></i>
                 </button>
 
-                <a href="#" class="btn btn-whatsapp" id="nav-whatsapp" target="_blank">
+                <a href="#" class="btn btn-whatsapp hide-mobile" id="nav-whatsapp" target="_blank">
                     <i class="fab fa-whatsapp"></i> Chat Now
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- Hero -->
-    <section id="home" class="hero">
-        <div class="hero-bg"></div>
+    </section>
+
+    <!-- Featured Products -->
+    <section id="featured" class="featured" style="display: none;">
         <div class="container">
-            <div class="hero-content">
-                <h1 id="hero-headline">Modern IT & POS Solutions</h1>
-                <p id="hero-subtitle">Empowering your business with top-tier technology.</p>
-                <div class="hero-buttons">
-                    <a href="#products" class="btn btn-primary">View Products <i class="fas fa-arrow-right"></i></a>
-                    <a href="#contact" class="btn btn-outline">Contact Us</a>
-                </div>
+            <div class="section-title">
+                <h2>Featured <span class="gradient-text">Deals</span></h2>
+                <p>Handpicked premium solutions for your elite business.</p>
             </div>
-            <div class="hero-image">
-                <img id="hero-main-img"
-                    src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                    alt="POS System Setup" style="opacity: 0.8;">
+            <div class="featured-grid" id="featured-grid">
+                <!-- Featured products loaded here -->
             </div>
         </div>
     </section>
@@ -181,13 +181,97 @@
         </div>
     </footer>
 
+    <!-- Shopping Cart Drawer -->
+    <div id="cart-drawer" class="cart-drawer">
+        <div class="cart-header">
+            <h3>Your Cart <span id="cart-title-count">(0)</span></h3>
+            <button class="close-cart" id="close-cart"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cart-items" id="cart-items-list">
+            <!-- Cart items injected here -->
+        </div>
+        <div class="cart-footer">
+            <div class="cart-summary">
+                <div class="summary-line">
+                    <span>Subtotal</span>
+                    <span id="cart-subtotal">Rs. 0</span>
+                </div>
+                <div class="summary-line">
+                    <span>Estimated Delivery</span>
+                    <span class="text-success">Free</span>
+                </div>
+                <div class="summary-total">
+                    <span>Total</span>
+                    <span id="cart-total-footer">Rs. 0</span>
+                </div>
+            </div>
+            <div class="cart-actions">
+                <button class="btn btn-primary btn-full" id="checkout-trigger">Checkout Now</button>
+                <button class="btn btn-link btn-full" id="continue-shopping">Continue Shopping</button>
+            </div>
+            <div class="cart-trust">
+                <i class="fab fa-whatsapp"></i> Secured via WhatsApp & Cloud Tracking
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content checkout-content">
+            <button class="modal-close" id="checkout-close"><i class="fas fa-times"></i></button>
+            <div class="checkout-header">
+                <h2>Complete Your Order</h2>
+                <p>Choose your preferred checkout method below.</p>
+            </div>
+
+            <div class="checkout-methods">
+                <div class="method-card active" data-method="whatsapp">
+                    <i class="fab fa-whatsapp"></i>
+                    <h4>WhatsApp Checkout</h4>
+                    <p>Fastest & direct communication.</p>
+                </div>
+                <div class="method-card" data-method="direct">
+                    <i class="fas fa-shipping-fast"></i>
+                    <h4>Place Order Directly</h4>
+                    <p>Submit details for a call back.</p>
+                </div>
+            </div>
+
+            <form id="checkout-form" class="checkout-form">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="cust-name" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="cust-phone" placeholder="WhatsApp or Phone number" required>
+                </div>
+                <div class="form-group" id="address-group" style="display: none;">
+                    <label>Shipping Address (Optional)</label>
+                    <textarea id="cust-address" placeholder="Enter full address for faster processing"></textarea>
+                </div>
+                
+                <div class="order-summary-box">
+                    <div class="summary-item">Items: <span id="summary-qty">0</span></div>
+                    <div class="summary-item total">Total: <span id="summary-total">Rs. 0</span></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full checkout-submit" id="btn-final-checkout">
+                    Confirm & Place Order
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Quick View Modal -->
     <div id="qv-modal" class="modal">
         <div class="modal-content">
             <button class="modal-close" id="qv-close"><i class="fas fa-times"></i></button>
             <div class="qv-grid">
                 <div class="qv-image">
-                    <img id="qv-img" src="" alt="">
+                    <div class="main-img-container">
+                        <img id="qv-img" src="" alt="">
+                    </div>
                 </div>
                 <div class="qv-info">
                     <div class="qv-brand" id="qv-brand"></div>
@@ -208,9 +292,9 @@
 
                     <div class="qv-footer">
                         <div class="qv-price" id="qv-price"></div>
-                        <a href="#" class="btn btn-primary" id="qv-wa-btn" target="_blank">
-                            <i class="fab fa-whatsapp"></i> Inquire via WhatsApp
-                        </a>
+                        <button class="btn btn-primary" id="add-to-cart-btn">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                        </button>
                     </div>
                 </div>
             </div>
@@ -220,5 +304,6 @@
     <!-- Scripts -->
     <script type="module" src="js/main.js"></script>
 </body>
+
 
 </html>
