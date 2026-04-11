@@ -338,9 +338,9 @@
             <h3 id="modal-title" style="margin-bottom: 1rem; padding: 1.5rem 1.5rem 0.5rem;">Add/Edit Product</h3>
             
             <!-- Step Indicator -->
-            <div class="step-indicator">
+            <div class="step-indicator" id="modal-step-indicator" style="cursor: pointer;">
                 <div class="step active" data-step="1"><span>1</span><label>General</label></div>
-                <div class="step" data-step="2"><span>2</span><label>Pricing</label></div>
+                <div class="step" data-step="2"><span>2</span><label>Pricing & Actions</label></div>
                 <div class="step" data-step="3"><span>3</span><label>Media</label></div>
             </div>
 
@@ -422,6 +422,24 @@
                         <label>Warranty Period</label>
                         <input type="text" id="prod-warranty" placeholder="E.g. 1 Year, 6 Months">
                     </div>
+                    <!-- Product Button Options -->
+                    <div class="form-section-group" style="margin-top: 1.5rem;">
+                        <h4 class="form-group-title"><i class="fas fa-mouse-pointer"></i> Button Options</h4>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                            <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <input type="checkbox" id="prod-add-to-cart" checked style="width: 18px; height: 18px; margin: 0;">
+                                <label for="prod-add-to-cart" style="margin: 0; cursor: pointer; color: var(--text-main); font-size: 0.85rem;">Show "Add to Cart"</label>
+                            </div>
+                            <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <input type="checkbox" id="prod-buy-now" checked style="width: 18px; height: 18px; margin: 0;">
+                                <label for="prod-buy-now" style="margin: 0; cursor: pointer; color: var(--text-main); font-size: 0.85rem;">Show "Buy Now" (Direct Checkout)</label>
+                            </div>
+                            <div class="form-group checkbox-group" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0px; background: rgba(37, 211, 102, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid #25D366;">
+                                <input type="checkbox" id="prod-whatsapp-inquiry" checked style="width: 18px; height: 18px; margin: 0;">
+                                <label for="prod-whatsapp-inquiry" style="margin: 0; cursor: pointer; color: #25D366; font-size: 0.85rem; font-weight: 600;">Show "WhatsApp Inquiry"</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Step 3: Description & Media -->
@@ -450,9 +468,7 @@
 
                 <!-- Modal Footer Actions -->
                 <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-                    <button type="button" class="btn btn-outline" id="btn-prev-step" style="display: none; flex: 1;">Back</button>
-                    <button type="button" class="btn btn-primary" id="btn-next-step" style="flex: 2;">Next <i class="fas fa-arrow-right"></i></button>
-                    <button type="submit" class="btn btn-primary" id="btn-save-product" style="display: none; flex: 2;">Save Product <i class="fas fa-check"></i></button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-product" style="flex: 1;">Save Product <i class="fas fa-check"></i></button>
                 </div>
             </form>
         </div>

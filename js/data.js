@@ -351,7 +351,10 @@ export async function addProduct(productData) {
             images: productData.images || [],
             show_on_homepage: productData.showOnHomepage ?? true,
             availability: productData.stockStatus === 'In Stock',
-            warranty: productData.warranty
+            warranty: productData.warranty,
+            add_to_cart: productData.add_to_cart ?? true,
+            buy_now: productData.buy_now ?? true,
+            whatsapp_inquiry: productData.whatsapp_inquiry ?? true
         };
         
         const { data, error } = await supabase
@@ -385,7 +388,10 @@ export async function updateProduct(id, productData) {
             images: productData.images || [],
             show_on_homepage: productData.showOnHomepage ?? true,
             availability: productData.stockStatus === 'In Stock',
-            warranty: productData.warranty
+            warranty: productData.warranty,
+            add_to_cart: productData.add_to_cart ?? true,
+            buy_now: productData.buy_now ?? true,
+            whatsapp_inquiry: productData.whatsapp_inquiry ?? true
         };
         
         const { error } = await supabase
@@ -490,7 +496,10 @@ function mapSupabaseProduct(item) {
         image: item.image_url || "",
         images: item.images || [],
         showOnHomepage: item.show_on_homepage ?? true,
-        warranty: item.warranty || ""
+        warranty: item.warranty || "",
+        add_to_cart: item.add_to_cart ?? true,
+        buy_now: item.buy_now ?? true,
+        whatsapp_inquiry: item.whatsapp_inquiry ?? true
     };
 }
 

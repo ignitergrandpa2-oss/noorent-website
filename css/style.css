@@ -540,8 +540,8 @@ header .container {
     color: var(--accent-glow);
 }
 
-.buy-btn {
-    padding: 0.4rem 1rem;
+.product-actions .btn {
+    padding: 0.4rem 0.8rem;
     font-size: 0.9rem;
 }
 

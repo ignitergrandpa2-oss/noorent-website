@@ -269,6 +269,17 @@ function createProductCard(p, business) {
     card.className = 'product-card';
     const displayCategory = (p.category || 'General').split('::').pop();
     
+    let buttonsHtml = '';
+    if (p.add_to_cart !== false) {
+        buttonsHtml += `<button class="btn btn-primary buy-btn" title="Add to Cart"><i class="fas fa-cart-plus"></i></button>`;
+    }
+    if (p.buy_now !== false) {
+        buttonsHtml += `<button class="btn btn-primary direct-buy-btn" title="Buy Now"><i class="fas fa-bolt"></i></button>`;
+    }
+    if (p.whatsapp_inquiry !== false) {
+        buttonsHtml += `<button class="btn whatsapp-inquiry-btn" title="WhatsApp Inquiry" style="background-color:#25D366; color:white; border:none;"><i class="fab fa-whatsapp"></i></button>`;
+    }
+
     card.innerHTML = `
         <div class="product-image">
             ${imgHtml}
@@ -281,7 +292,9 @@ function createProductCard(p, business) {
             <p class="product-desc">${p.description.length > 80 ? p.description.substring(0, 80) + '...' : p.description}</p>
             <div class="product-footer">
                 ${priceHtml}
-                <button class="btn btn-primary buy-btn"><i class="fas fa-cart-plus"></i> Add</button>
+                <div class="product-actions" style="display:flex; gap:0.5rem; justify-content: flex-end;">
+                    ${buttonsHtml}
+                </div>
             </div>
         </div>
     `;
@@ -291,11 +304,36 @@ function createProductCard(p, business) {
         openQuickView(p, business);
     });
 
-    card.querySelector('.buy-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        cart.addItem(p);
-        document.getElementById('cart-drawer').classList.add('active');
-    });
+    const buyBtn = card.querySelector('.buy-btn');
+    if (buyBtn) {
+        buyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cart.addItem(p);
+            document.getElementById('cart-drawer').classList.add('active');
+        });
+    }
+
+    const directBuyBtn = card.querySelector('.direct-buy-btn');
+    if (directBuyBtn) {
+        directBuyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cart.clear(); // assuming buying directly resets cart to just this item, or we can just open checkout
+            cart.addItem(p);
+            document.getElementById('checkout-modal').style.display = 'flex';
+            document.getElementById('summary-qty').textContent = cart.getCount();
+            document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
+        });
+    }
+
+    const waBtn = card.querySelector('.whatsapp-inquiry-btn');
+    if (waBtn) {
+        waBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const msg = `Hi there! I’m interested in your collection. Specifically, I'm looking at ${p.name}. Kindly assist me with the best options and current pricing.`;
+            const waUrl = `https://wa.me/${(business.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+            window.open(waUrl, '_blank');
+        });
+    }
 
     return card;
 }
@@ -329,15 +367,51 @@ function openQuickView(p, b) {
         priceEl.textContent = 'Contact for price';
     }
 
+    const footer = document.getElementById('qv-footer-actions');
+    if(!footer) return; // Need to update index.html to wrap the buttons
+
+    // Render quick view buttons dynamically
+    let buttonsHtml = '';
+    if (p.add_to_cart !== false) {
+        buttonsHtml += `<button class="btn btn-primary" id="add-to-cart-btn"><i class="fas fa-cart-plus"></i> Add to Cart</button>`;
+    }
+    if (p.buy_now !== false) {
+        buttonsHtml += `<button class="btn btn-outline" id="qv-buy-now-btn" style="border-color:var(--accent); color:var(--accent);"><i class="fas fa-bolt"></i> Buy Now</button>`;
+    }
+    if (p.whatsapp_inquiry !== false) {
+        buttonsHtml += `<button class="btn" id="qv-wa-btn" style="background-color:#25D366; color:white; border:none;"><i class="fab fa-whatsapp"></i> Inquiry</button>`;
+    }
+    footer.innerHTML = buttonsHtml;
+
     const addBtn = document.getElementById('add-to-cart-btn');
-    const newAddBtn = addBtn.cloneNode(true); // Deep clone to reset listeners
-    addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            cart.addItem(p);
+            modal.style.display = 'none';
+            document.getElementById('cart-drawer').classList.add('active');
+        });
+    }
     
-    newAddBtn.addEventListener('click', () => {
-        cart.addItem(p);
-        modal.style.display = 'none';
-        document.getElementById('cart-drawer').classList.add('active');
-    });
+    const buyNowBtn = document.getElementById('qv-buy-now-btn');
+    if (buyNowBtn) {
+        buyNowBtn.addEventListener('click', () => {
+            cart.clear();
+            cart.addItem(p);
+            modal.style.display = 'none';
+            document.getElementById('checkout-modal').style.display = 'flex';
+            document.getElementById('summary-qty').textContent = cart.getCount();
+            document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
+        });
+    }
+
+    const waBtn = document.getElementById('qv-wa-btn');
+    if (waBtn) {
+        waBtn.addEventListener('click', () => {
+            const msg = `Hi there! I’m interested in your collection. Specifically, I'm looking at ${p.name}. Kindly assist me with the best options and current pricing.`;
+            const waUrl = `https://wa.me/${(b.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+            window.open(waUrl, '_blank');
+        });
+    }
 
     modal.style.display = 'flex';
 }

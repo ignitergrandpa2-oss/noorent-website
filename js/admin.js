@@ -980,9 +980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target === galleryModal) galleryModal.classList.remove('active');
     });
 
-    // --- Multi-Step Form Logic ---
-    const btnNext = document.getElementById('btn-next-step');
-    const btnPrev = document.getElementById('btn-prev-step');
+    // --- Form Tab Logic ---
     const btnSave = document.getElementById('btn-save-product');
     const steps = document.querySelectorAll('.form-step');
     const indicatorSteps = document.querySelectorAll('.step-indicator .step');
@@ -992,17 +990,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         steps.forEach((s, idx) => s.classList.toggle('active', idx + 1 === currentStep));
         indicatorSteps.forEach((s, idx) => {
             s.classList.toggle('active', idx + 1 === currentStep);
-            s.classList.toggle('completed', idx + 1 < currentStep);
+            s.classList.toggle('completed', false); // No longer marking as "completed", just tabs
         });
-        btnPrev.style.display = currentStep === 1 ? 'none' : 'block';
-        btnNext.style.display = currentStep === 3 ? 'none' : 'block';
-        btnSave.style.display = currentStep === 3 ? 'block' : 'none';
         
         if (window.innerWidth <= 600) document.querySelector('.modal-content').scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    btnNext.addEventListener('click', () => goToStep(currentStep + 1));
-    btnPrev.addEventListener('click', () => goToStep(currentStep - 1));
+    indicatorSteps.forEach((stepIndicator, idx) => {
+        stepIndicator.addEventListener('click', () => {
+            goToStep(idx + 1);
+        });
+    });
 
     function openProductModal(id = null) {
         currentEditId = id;
@@ -1037,6 +1035,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('prod-stock').value = p.stockStatus || "In Stock";
                 document.getElementById('prod-homepage').checked = p.showOnHomepage;
                 document.getElementById('prod-featured').checked = p.isFeatured || false;
+                document.getElementById('prod-add-to-cart').checked = p.add_to_cart ?? true;
+                document.getElementById('prod-buy-now').checked = p.buy_now ?? true;
+                document.getElementById('prod-whatsapp-inquiry').checked = p.whatsapp_inquiry ?? true;
                 productImages = p.images || (p.image ? [p.image] : []);
             }
         }
@@ -1066,7 +1067,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             image: productImages[0] || '', // backward compat
             stockStatus: document.getElementById('prod-stock').value,
             showOnHomepage: document.getElementById('prod-homepage').checked,
-            isFeatured: document.getElementById('prod-featured').checked
+            isFeatured: document.getElementById('prod-featured').checked,
+            add_to_cart: document.getElementById('prod-add-to-cart').checked,
+            buy_now: document.getElementById('prod-buy-now').checked,
+            whatsapp_inquiry: document.getElementById('prod-whatsapp-inquiry').checked
         };
 
         try {
