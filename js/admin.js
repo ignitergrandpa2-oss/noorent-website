@@ -1,12 +1,12 @@
 import { supabase } from './supabase-config.js';
-import { 
-    getBusinessInfo, 
-    updateBusinessInfo, 
-    getProducts, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct, 
-    getCategories, 
+import {
+    getBusinessInfo,
+    updateBusinessInfo,
+    getProducts,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    getCategories,
     updateCategories,
     subscribeToProducts,
     getUserProfile,
@@ -34,17 +34,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Unified Auth State Machine ---
     async function syncAuthState(session) {
         const submitBtn = authForm ? authForm.querySelector('button') : null;
-        
+
         try {
             if (session) {
                 console.log("Auth Status: Logged In");
-                
+
                 // 1. Set immediate fallback profile to unblock UI
-                if (!currentUser) {
-                    currentUser = { 
-                        role: 'admin', 
-                        display_name: session.user.email.split('@')[0], 
-                        email: session.user.email 
+                if (!currentUser && session?.user) {
+                    currentUser = {
+                        role: 'admin',
+                        display_name: (session.user.email || 'admin').split('@')[0],
+                        email: session.user.email || ''
                     };
                 }
 
@@ -97,16 +97,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const submitBtn = authForm.querySelector('button');
-            
+
             try {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
                 authError.style.display = 'none';
-                
+
                 // SAFETY TIMEOUT: If Supabase takes > 10s, reset the button to prevent permanent hang
                 const safetyTimeout = setTimeout(() => {
                     if (submitBtn.disabled) {
@@ -119,15 +119,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 console.log("Signing in...");
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                
+
                 clearTimeout(safetyTimeout);
                 if (error) throw error;
-                
+
                 if (data.session) {
                     console.log("Sign-in data received, transitioning...");
                     syncAuthState(data.session);
                 }
-                
+
             } catch (err) {
                 console.error("Login failed:", err.message);
                 authError.textContent = err.message;
@@ -155,24 +155,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function showLogin() {
-        adminWrapper.style.opacity = '0';
-        setTimeout(() => {
-            adminWrapper.style.display = 'none';
-            loginContainer.style.display = 'flex';
-            loginContainer.style.opacity = '0';
+        if (adminWrapper.style.display !== 'none') {
+            adminWrapper.style.opacity = '0';
             setTimeout(() => {
-                loginContainer.style.opacity = '1';
-            }, 50);
-        }, 500);
+                adminWrapper.style.display = 'none';
+                loginContainer.style.display = 'flex';
+                setTimeout(() => { loginContainer.style.opacity = '1'; }, 50);
+            }, 500);
+        } else {
+            loginContainer.style.display = 'flex';
+            loginContainer.style.opacity = '1';
+        }
     }
 
     function updateRoleVisibility() {
         if (!currentUser) return;
-        
+
         // Handle Role-Based UI
         const settingsTab = document.querySelector('[data-tab="tab-settings"]');
         const backupTab = document.querySelector('[data-tab="tab-backup"]');
-        
+
         if (currentUser.role === 'client_admin') {
             if (settingsTab) settingsTab.style.display = 'none';
             if (backupTab) backupTab.style.display = 'none';
@@ -180,12 +182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (settingsTab) settingsTab.style.display = 'block';
             if (backupTab) backupTab.style.display = 'block';
         }
-    }
-
-
-    function showLogin() {
-        adminWrapper.style.display = 'none';
-        loginContainer.style.display = 'flex';
     }
 
     // --- Tab Navigation ---
@@ -196,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = e.currentTarget.getAttribute('data-tab');
-            
+
             // Check permissions
             if (currentUser?.role === 'client_admin' && (targetTab === 'tab-settings' || targetTab === 'tab-backup')) {
                 alert("Access Denied: Super Admin role required.");
@@ -205,16 +201,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             navLinks.forEach(l => l.classList.remove('active'));
             tabs.forEach(t => t.classList.remove('active'));
-            
+
             // Handle both desktop and mobile link active states
             const allLinksForThisTab = document.querySelectorAll(`[data-tab="${targetTab}"]`);
             allLinksForThisTab.forEach(l => l.classList.add('active'));
 
             document.getElementById(targetTab).classList.add('active');
-            
+
             const headerTitle = document.querySelector('.admin-header h2');
             if (headerTitle) headerTitle.textContent = e.currentTarget.textContent.trim();
-            
+
             // Scroll to top on mobile
             if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
         });
@@ -247,13 +243,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         categoriesList = await getCategories();
         updateCategoryFilter();
         populateSettingsForm();
-        
+
         // Initial Fetch
         const [products, orders] = await Promise.all([
             getProducts(),
             getOrders()
         ]);
-        
+
         productsList = products;
         updateStats(orders);
         renderProductsTable();
@@ -281,10 +277,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const filterSelect = document.getElementById('admin-category-filter');
         const mainCatSelect = document.getElementById('prod-main-category');
         const subCatSelect = document.getElementById('prod-sub-category');
-        
+
         // 1. Get unique Main Categories
         const mainCategories = [...new Set(categoriesList.map(cat => cat.split('::')[0]))].sort();
-        
+
         // 2. Update Dashboard Filter
         if (filterSelect) {
             const currentValue = filterSelect.value;
@@ -324,11 +320,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             mainCatSelect.onchange = () => {
                 const selectedMain = mainCatSelect.value;
                 subCatSelect.innerHTML = '<option value="">None / General</option>';
-                
+
                 const subs = categoriesList
                     .filter(c => c.startsWith(selectedMain + '::'))
                     .map(c => c.split('::')[1]);
-                
+
                 subs.forEach(sub => {
                     const opt = document.createElement('option');
                     opt.value = sub;
@@ -379,23 +375,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!orders) orders = await getOrders();
         const tbody = document.getElementById('admin-orders-list');
         const filter = document.getElementById('admin-order-filter')?.value || 'all';
-        
+
         tbody.innerHTML = '';
-        
+
         let filtered = orders.filter(o => filter === 'all' || o.status === filter);
-        
+
         // Sort by newest
         filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         filtered.forEach(o => {
             const tr = document.createElement('tr');
             const date = new Date(o.created_at).toLocaleDateString();
-            const sourceBadge = o.source === 'whatsapp' 
-                ? '<span class="badge" style="background: #25D366; color:white;"><i class="fab fa-whatsapp"></i> WA</span>' 
+            const sourceBadge = o.source === 'whatsapp'
+                ? '<span class="badge" style="background: #25D366; color:white;"><i class="fab fa-whatsapp"></i> WA</span>'
                 : '<span class="badge" style="background: var(--accent); color:white;"><i class="fas fa-globe"></i> Direct</span>';
-            
+
             const statusClass = `status-${o.status}`; // You might need to add these classes to admin.css
-            
+
             tr.innerHTML = `
                 <td>#${o.id}</td>
                 <td>
@@ -420,21 +416,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }));
 
         tbody.querySelectorAll('.update-status').forEach(btn => btn.addEventListener('click', async () => {
-             const id = btn.getAttribute('data-id');
-             const order = orders.find(o => o.id == id);
-             const nextStatus = order.status === 'pending' ? 'contacted' : (order.status === 'contacted' ? 'completed' : 'pending');
-             if (confirm(`Change status to ${nextStatus}?`)) {
-                 await updateOrderStatus(id, nextStatus);
-                 showToast("Status updated");
-                 initDashboard(); // Refresh
-             }
+            const id = btn.getAttribute('data-id');
+            const order = orders.find(o => o.id == id);
+            const nextStatus = order.status === 'pending' ? 'contacted' : (order.status === 'contacted' ? 'completed' : 'pending');
+            if (confirm(`Change status to ${nextStatus}?`)) {
+                await updateOrderStatus(id, nextStatus);
+                showToast("Status updated");
+                initDashboard(); // Refresh
+            }
         }));
     }
 
     function openOrderDetail(o) {
         const modal = document.getElementById('order-detail-modal');
         const content = document.getElementById('order-detail-content');
-        
+
         content.innerHTML = `
             <div class="order-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
@@ -480,7 +476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         modal.style.display = 'flex';
-        
+
         document.getElementById('btn-mark-contacted').onclick = async () => {
             await updateOrderStatus(o.id, 'contacted');
             modal.style.display = 'none';
@@ -493,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             initDashboard();
         };
     }
-    
+
     const closeOrderBtn = document.getElementById('close-order-modal');
     if (closeOrderBtn) closeOrderBtn.onclick = () => document.getElementById('order-detail-modal').style.display = 'none';
 
@@ -504,16 +500,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('admin-products-list');
         const searchInput = document.getElementById('admin-product-search');
         const filterSelect = document.getElementById('admin-category-filter');
-        
+
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
         const currentFilter = filterSelect ? filterSelect.value : 'all';
-        
+
         tbody.innerHTML = '';
 
         let filtered = productsList.filter(p => {
-            const matchesSearch = p.name.toLowerCase().includes(searchTerm) || 
-                                 (p.brand && p.brand.toLowerCase().includes(searchTerm)) ||
-                                 (p.modelNumber && p.modelNumber.toLowerCase().includes(searchTerm));
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm) ||
+                (p.brand && p.brand.toLowerCase().includes(searchTerm)) ||
+                (p.modelNumber && p.modelNumber.toLowerCase().includes(searchTerm));
             const matchesCategory = currentFilter === 'all' || p.category === currentFilter;
             return matchesSearch && matchesCategory;
         });
@@ -554,7 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Image Handling & Optimization ---
-    
+
     async function compressImage(file, { maxWidth = 1200, quality = 0.8, format = 'image/webp' }) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -598,11 +594,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 1. Optimize
             if (progressBar) progressBar.querySelector('.upload-progress-bar').style.width = '20%';
             const blob = await compressImage(file, { maxWidth: 1200, quality: 0.8, format: 'image/webp' });
-            
+
             // 2. Prepare Path
             const fileName = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}.webp`;
             if (progressBar) progressBar.querySelector('.upload-progress-bar').style.width = '40%';
-            
+
             // 3. Upload to Supabase
             const { data, error } = await supabase.storage
                 .from('noorent-assets')
@@ -704,19 +700,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const toastMsg = replaceIndex !== null ? "Replacing image..." : `Processing ${files.length} images...`;
                 showToast(toastMsg);
-                
+
                 const uploadedUrls = [];
                 for (const file of files) {
                     const url = await processAndUploadImage(file, 'products');
                     uploadedUrls.push(url);
                 }
-                
+
                 if (replaceIndex !== null) {
                     productImages[replaceIndex] = uploadedUrls[0];
                 } else {
                     productImages.push(...uploadedUrls);
                 }
-                
+
                 renderImageSlots();
                 imageInput.value = '';
                 replaceIndex = null;
@@ -742,7 +738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button type="button" class="remove-img" data-index="${index}" title="Remove image"><i class="fas fa-times"></i></button>
                 <div class="image-overlay"><i class="fas fa-sync-alt"></i> Replace</div>
             `;
-            
+
             slot.querySelector('.img-preview').addEventListener('click', () => {
                 replaceIndex = index;
                 imageInput.click();
@@ -786,7 +782,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
                 if (productImages.includes(publicUrl)) item.classList.add('selected');
-                
+
                 item.innerHTML = `<img src="${publicUrl}">`;
                 item.addEventListener('click', () => {
                     item.classList.toggle('selected');
@@ -819,27 +815,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         const mainInput = document.getElementById('new-category-main');
         const subInput = document.getElementById('new-category-sub');
-        
+
         const main = mainInput.value.trim();
         const sub = subInput.value.trim();
-        
+
         if (!main) return;
 
         let fullName = sub ? `${main}::${sub}` : main;
-        
+
         if (!categoriesList.includes(fullName)) {
             // If sub was provided, ensure main exists too
             if (sub && !categoriesList.includes(main)) {
                 categoriesList.push(main);
             }
-            
+
             categoriesList.push(fullName);
             categoriesList.sort(); // Keep them neat
-            
+
             await updateCategories(categoriesList);
             renderCategoryTree();
             updateCategoryFilter();
-            
+
             subInput.value = '';
             showToast("Category added!");
         } else {
@@ -850,17 +846,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderCategoryTree() {
         const container = document.getElementById('admin-category-tree');
         container.innerHTML = '';
-        
+
         const mainCategories = [...new Set(categoriesList.map(cat => cat.split('::')[0]))].sort();
-        
+
         mainCategories.forEach(main => {
             const mainNode = document.createElement('div');
             mainNode.className = 'tree-main-node';
-            
+
             const subCategories = categoriesList
                 .filter(c => c.startsWith(main + '::'))
                 .map(c => c.split('::')[1]);
-                
+
             mainNode.innerHTML = `
                 <div class="tree-header">
                     <div class="tree-title"><i class="fas fa-chevron-right"></i> ${main}</div>
@@ -870,12 +866,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="tree-sub-nodes">
                     ${subCategories.map(sub => {
-                        const isSubSub = sub.includes(' - ');
-                        const displayName = isSubSub ? sub.split(' - ')[1] : sub;
-                        const indentStyle = isSubSub ? 'margin-left: 1.5rem; opacity: 0.8; font-size: 0.9em; border-left: 1px solid var(--border); padding-left: 0.8rem;' : '';
-                        const icon = isSubSub ? '<i class="fas fa-minus" style="font-size: 0.7em; margin-right: 5px;"></i>' : '';
-                        
-                        return `
+                const isSubSub = sub.includes(' - ');
+                const displayName = isSubSub ? sub.split(' - ')[1] : sub;
+                const indentStyle = isSubSub ? 'margin-left: 1.5rem; opacity: 0.8; font-size: 0.9em; border-left: 1px solid var(--border); padding-left: 0.8rem;' : '';
+                const icon = isSubSub ? '<i class="fas fa-minus" style="font-size: 0.7em; margin-right: 5px;"></i>' : '';
+
+                return `
                             <div class="tree-sub-node" style="${indentStyle}">
                                 <span>${icon}${displayName}</span>
                                 <div class="tree-actions">
@@ -883,11 +879,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                             </div>
                         `;
-                    }).join('')}
+            }).join('')}
                     ${subCategories.length === 0 ? '<div class="tree-sub-node" style="font-style:italic; opacity:0.5;">No subcategories</div>' : ''}
                 </div>
             `;
-            
+
             // Toggle Expansion
             const header = mainNode.querySelector('.tree-header');
             header.addEventListener('click', (e) => {
@@ -896,7 +892,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const icon = header.querySelector('i');
                 icon.className = header.classList.contains('active') ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
             });
-            
+
             container.appendChild(mainNode);
         });
 
@@ -906,18 +902,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.stopPropagation();
                 const catToDelete = btn.getAttribute('data-cat');
                 const isMain = !catToDelete.includes('::');
-                
-                const msg = isMain 
-                    ? `Delete "${catToDelete}" and ALL its subcategories?` 
+
+                const msg = isMain
+                    ? `Delete "${catToDelete}" and ALL its subcategories?`
                     : `Delete subcategory "${catToDelete.split('::')[1]}"?`;
-                    
+
                 if (confirm(msg)) {
                     if (isMain) {
                         categoriesList = categoriesList.filter(c => !c.startsWith(catToDelete));
                     } else {
                         categoriesList = categoriesList.filter(c => c !== catToDelete);
                     }
-                    
+
                     await updateCategories(categoriesList);
                     renderCategoryTree();
                     updateCategoryFilter();
@@ -932,16 +928,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('admin-products-list');
         const searchInput = document.getElementById('admin-product-search');
         const filterSelect = document.getElementById('admin-category-filter');
-        
+
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
         const currentFilter = filterSelect ? filterSelect.value : 'all';
-        
+
         tbody.innerHTML = '';
 
         let filtered = productsList.filter(p => {
-            const matchesSearch = p.name.toLowerCase().includes(searchTerm) || 
-                                 (p.brand && p.brand.toLowerCase().includes(searchTerm)) ||
-                                 (p.modelNumber && p.modelNumber.toLowerCase().includes(searchTerm));
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm) ||
+                (p.brand && p.brand.toLowerCase().includes(searchTerm)) ||
+                (p.modelNumber && p.modelNumber.toLowerCase().includes(searchTerm));
             const matchesCategory = currentFilter === 'all' || p.category === currentFilter;
             return matchesSearch && matchesCategory;
         });
@@ -1010,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             s.classList.toggle('active', idx + 1 === currentStep);
             s.classList.toggle('completed', false); // No longer marking as "completed", just tabs
         });
-        
+
         if (window.innerWidth <= 600) document.querySelector('.modal-content').scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1025,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         productForm.reset();
         productImages = [];
         goToStep(1);
-        
+
         if (id) {
             const p = productsList.find(x => x.id === id);
             if (p) {
@@ -1033,15 +1029,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('prod-name').value = p.name;
                 document.getElementById('prod-brand').value = p.brand || '';
                 document.getElementById('prod-model').value = p.modelNumber || '';
-                
+
                 // Split Category Logic
                 const catParts = (p.category || '').split('::');
                 const mainCat = catParts[0];
                 const subCat = catParts[1] || '';
-                
+
                 const mainSelect = document.getElementById('prod-main-category');
                 const subSelect = document.getElementById('prod-sub-category');
-                
+
                 mainSelect.value = mainCat;
                 mainSelect.onchange(); // Trigger sub-cat population
                 subSelect.value = subCat;
@@ -1069,14 +1065,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: document.getElementById('prod-name').value.trim(),
             brand: document.getElementById('prod-brand').value.trim(),
             modelNumber: document.getElementById('prod-model').value.trim(),
-            
+
             // Join Category Logic
             category: (() => {
                 const main = document.getElementById('prod-main-category').value;
                 const sub = document.getElementById('prod-sub-category').value;
                 return sub ? `${main}::${sub}` : main;
             })(),
-            
+
             price: document.getElementById('prod-price').value.trim(),
             showPrice: document.getElementById('prod-show-price').checked,
             warranty: document.getElementById('prod-warranty').value.trim(),
@@ -1115,10 +1111,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('set-hero-headline').value = b.heroHeadline;
         document.getElementById('set-hero-subtitle').value = b.heroSubtitle;
         document.getElementById('set-hero-image').value = b.heroImage || '';
-        
+
         if (b.heroImage) document.getElementById('hero-preview-container').innerHTML = `<img src="${b.heroImage}">`;
         if (b.logo) document.getElementById('logo-preview-container').innerHTML = `<img src="${b.logo}">`;
-        
+
         document.getElementById('set-primary-color').value = b.primaryColor || '#4f8ef7';
         document.getElementById('set-secondary-color').value = b.secondaryColor || '#050818';
 
@@ -1186,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             facebook: document.getElementById('set-facebook').value.trim(),
             instagram: document.getElementById('set-instagram').value.trim()
         };
-        
+
         try {
             await updateBusinessInfo(data);
             showToast("Settings updated successfully!");
