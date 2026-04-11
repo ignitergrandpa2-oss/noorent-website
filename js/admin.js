@@ -344,11 +344,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function showToast(msg = "Changes saved successfully!") {
-        const toast = document.getElementById('save-toast');
+    function showToast(msg = "Changes saved successfully!", isError = false) {
+        let toast = document.getElementById('save-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'save-toast';
+            toast.className = 'toast';
+            document.body.appendChild(toast);
+        }
         toast.textContent = msg;
+        if (isError) {
+            toast.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            toast.style.borderColor = '#ef4444';
+            toast.style.color = '#ef4444';
+        } else {
+            toast.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+            toast.style.borderColor = '#10b981';
+            toast.style.color = '#10b981';
+        }
         toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3000);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.style = '', 300); // reset styles after fade out
+        }, 3000);
     }
 
     function updateStats(orders = []) {
@@ -1073,16 +1091,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             whatsapp_inquiry: document.getElementById('prod-whatsapp-inquiry').checked
         };
 
+        const originalBtnHtml = btnSave.innerHTML;
         try {
             btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             if (currentEditId) await updateProduct(currentEditId, productData);
             else await addProduct(productData);
             modal.classList.remove('active');
-            showToast("Product saved!");
+            showToast("Product saved successfully!");
         } catch (error) {
-            alert(error.message);
+            showToast(error.message, true);
         } finally {
             btnSave.disabled = false;
+            btnSave.innerHTML = originalBtnHtml;
         }
     });
 
@@ -1108,8 +1129,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('set-instagram').value = b.instagram;
     }
 
+    // --- Hero and Logo Image Handlers ---
+    const heroInput = document.getElementById('set-hero-image-file');
+    if (heroInput) {
+        heroInput.addEventListener('change', async (e) => {
+            if (!e.target.files.length) return;
+            const pBar = document.getElementById('hero-upload-progress');
+            try {
+                const url = await processAndUploadImage(e.target.files[0], 'heroes', pBar);
+                document.getElementById('set-hero-image').value = url;
+                document.getElementById('hero-preview-container').innerHTML = `<img src="${url}">`;
+                showToast("Hero image uploaded! Don't forget to click Save Settings.");
+            } catch (err) {
+                showToast("Upload failed: " + err.message, true);
+                if (pBar) pBar.style.display = 'none';
+            }
+        });
+    }
+
+    const logoInput = document.getElementById('set-logo-file');
+    if (logoInput) {
+        logoInput.addEventListener('change', async (e) => {
+            if (!e.target.files.length) return;
+            const pBar = document.getElementById('logo-upload-progress');
+            try {
+                const url = await processAndUploadImage(e.target.files[0], 'logos', pBar);
+                document.getElementById('set-logo').value = url;
+                document.getElementById('logo-preview-container').innerHTML = `<img src="${url}">`;
+                showToast("Logo uploaded! Don't forget to click Save Settings.");
+            } catch (err) {
+                showToast("Upload failed: " + err.message, true);
+                if (pBar) pBar.style.display = 'none';
+            }
+        });
+    }
+
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const settingsBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = settingsBtn.innerHTML;
+        settingsBtn.disabled = true;
+        settingsBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         const data = {
             siteName: document.getElementById('set-name').value.trim(),
             slogan: document.getElementById('set-slogan').value.trim(),
@@ -1125,7 +1186,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             facebook: document.getElementById('set-facebook').value.trim(),
             instagram: document.getElementById('set-instagram').value.trim()
         };
-        updateBusinessInfo(data).then(() => showToast("Settings updated"));
+        
+        try {
+            await updateBusinessInfo(data);
+            showToast("Settings updated successfully!");
+        } catch (error) {
+            showToast("Failed to save settings: " + error.message, true);
+        } finally {
+            settingsBtn.disabled = false;
+            settingsBtn.innerHTML = originalText;
+        }
     });
 
     // --- Password Management ---

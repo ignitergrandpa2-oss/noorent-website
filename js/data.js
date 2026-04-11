@@ -138,11 +138,14 @@ export async function updateBusinessInfo(businessData) {
             site_name: businessData.siteName
         };
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('settings')
-            .upsert({ id: 1, ...payload });
+            .upsert({ id: 1, ...payload })
+            .select();
 
         if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Settings update failed due to database permissions.");
+        
         businessInfoCache = businessData;
         setStorageCache(CACHE_KEY_BUSINESS, businessInfoCache);
         return true;
@@ -394,12 +397,14 @@ export async function updateProduct(id, productData) {
             whatsapp_inquiry: productData.whatsapp_inquiry ?? true
         };
         
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('products')
             .update(payload)
-            .eq('id', id);
+            .eq('id', id)
+            .select();
             
         if (error) throw error;
+        if (!data || data.length === 0) throw new Error("Product update failed due to database permissions or missing record.");
         return true;
     } catch (error) {
         console.error("Error updating product in Supabase:", error);
