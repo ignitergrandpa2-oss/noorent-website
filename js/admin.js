@@ -11,7 +11,8 @@ import {
     subscribeToProducts,
     getUserProfile,
     getOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    cleanWhatsApp
 } from './data.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,65 +32,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnLogout = document.getElementById('btn-logout');
     const mobileLogout = document.getElementById('mobile-logout');
 
-    // --- Unified Auth State Machine ---
-    async function syncAuthState(session) {
-        const submitBtn = authForm ? authForm.querySelector('button') : null;
-
-        try {
-            if (session) {
-                console.log("Auth Status: Logged In");
-
-                // 1. Set immediate fallback profile to unblock UI
-                if (!currentUser && session?.user) {
-                    currentUser = {
-                        role: 'admin',
-                        display_name: (session.user.email || 'admin').split('@')[0],
-                        email: session.user.email || ''
-                    };
-                }
-
-                // 2. Transition UI immediately
-                if (!isInitialized) {
-                    showDashboard();
-                    isInitialized = true;
-                }
-
-                // 3. Background profile refresh
-                getUserProfile(session.user).then(profile => {
-                    if (profile) {
-                        currentUser = profile;
-                        console.log("Profile refined:", currentUser.role);
-                        updateRoleVisibility(); // New helper to refresh UI if role changed
-                    }
-                }).catch(err => console.warn("Background profile fetch failed:", err));
-
-            } else {
-                console.log("Auth Status: Logged Out");
-                currentUser = null;
-                isInitialized = false;
-                showLogin();
-                if (productsSubscriptionCleanup) {
-                    productsSubscriptionCleanup();
-                    productsSubscriptionCleanup = null;
-                }
-            }
-        } finally {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
-            }
-        }
+    // 1. Initial State Check
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+        console.log("Initial Session Found");
+        currentUser = (await getUserProfile(session.user)) || {
+            role: 'admin',
+            display_name: (session.user.email || 'admin').split('@')[0],
+            email: session.user.email
+        };
+        showDashboard();
+        isInitialized = true;
+    } else {
+        console.log("No Initial Session");
+        showLogin();
     }
+    isInitialLoad = false;
 
-    // --- Monitor Auth State ---
-    supabase.auth.onAuthStateChange((event, session) => {
+    // Handle Subsequent State Changes
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (isInitialLoad) return; // Prevent double-triggering during DOMContentLoaded
+
         console.log("Auth Event:", event);
-        syncAuthState(session);
-    });
-
-    // Initial check (handles page refreshes)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) syncAuthState(session);
+        if (event === 'SIGNED_IN' && session) {
+            currentUser = await getUserProfile(session.user);
+            showDashboard();
+            isInitialized = true;
+        } else if (event === 'SIGNED_OUT') {
+            showLogin();
+            isInitialized = false;
+        }
     });
 
     // --- Login Form Handler ---
@@ -122,11 +95,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 clearTimeout(safetyTimeout);
                 if (error) throw error;
-
-                if (data.session) {
-                    console.log("Sign-in data received, transitioning...");
-                    syncAuthState(data.session);
-                }
 
             } catch (err) {
                 console.error("Login failed:", err.message);
@@ -1176,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             logo: document.getElementById('set-logo').value,
             primaryColor: document.getElementById('set-primary-color').value,
             secondaryColor: document.getElementById('set-secondary-color').value,
-            whatsapp: document.getElementById('set-whatsapp').value.trim(),
+            whatsapp: cleanWhatsApp(document.getElementById('set-whatsapp').value.trim()),
             phones: document.getElementById('set-phones').value.split(',').map(s => s.trim()),
             address: document.getElementById('set-address').value.trim(),
             facebook: document.getElementById('set-facebook').value.trim(),

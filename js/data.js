@@ -39,6 +39,27 @@ function getStorageCache(key) {
 // --- DB Operations (Supabase) ---
 
 /**
+ * Helper to clean WhatsApp numbers for URL usage
+ * Removes +, spaces, dashes and non-digit characters
+ * Ensures it starts with country code (defaults to 92 if 10 digits without leading 0)
+ */
+export function cleanWhatsApp(number) {
+    if (!number) return '';
+    let cleaned = number.toString().replace(/\D/g, '');
+    
+    // Logic for Pakistan numbers: 0321... -> 92321...
+    if (cleaned.startsWith('0') && cleaned.length === 11) {
+        cleaned = '92' + cleaned.substring(1);
+    }
+    // If it's already 10 digits and doesn't start with 92, assume it needs 92
+    else if (cleaned.length === 10 && !cleaned.startsWith('92')) {
+        cleaned = '92' + cleaned;
+    }
+    
+    return cleaned;
+}
+
+/**
  * Fetches Business Info (Settings) from Supabase
  */
 export async function getBusinessInfo(forceRefresh = false) {
@@ -52,30 +73,50 @@ export async function getBusinessInfo(forceRefresh = false) {
     }
 
     try {
-        // Add timeout
-        const fetchPromise = supabase
-            .from('business_info')
-            .select('*')
-            .single();
-        
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Business info fetch timeout")), 5000)
-        );
+        // 1. Fetch from settings table
+        // Note: We use available columns: id, name, slogan, whatsapp, phones, address, hero_headline, hero_subtitle, hero_image_url, facebook, instagram
+        let { data: list, error } = await supabase.from('settings').select('*').limit(1);
 
-        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+        // 2. Handle Empty Table (Bootstrap)
+        if (!error && (!list || list.length === 0)) {
+            console.log("Settings table is empty. Initializing with default row...");
+            const defaults = getDefaultBusinessInfo();
+            const payload = {
+                id: 1,
+                name: defaults.name,
+                slogan: defaults.slogan,
+                whatsapp: defaults.whatsapp,
+                phones: defaults.phones,
+                address: defaults.address,
+                hero_headline: defaults.heroHeadline,
+                hero_subtitle: defaults.heroSubtitle,
+                hero_image_url: defaults.heroImage,
+                facebook: defaults.facebook,
+                instagram: defaults.instagram
+                // logo_url, site_name, primary_color, secondary_color are missing in schema
+            };
             
-        if (error) {
-            if (error.code === 'PGRST116') {
-                businessInfoCache = getDefaultBusinessInfo();
-                return businessInfoCache;
+            const insertResult = await supabase.from('settings').insert([payload]).select();
+            if (!insertResult.error && insertResult.data) {
+                list = insertResult.data;
+            } else {
+                console.warn("Bootstrap failed (likely missing columns), using in-memory defaults.");
+                list = [payload];
             }
-            throw error;
         }
+
+        if (error || !list || list.length === 0) {
+            console.warn("Supabase fetch failed, using defaults.");
+            businessInfoCache = getDefaultBusinessInfo();
+            return businessInfoCache;
+        }
+
+        const data = list[0];
         
         businessInfoCache = {
             name: data.name || "NOORENTERPRISES (Noor.Ent)",
             slogan: data.slogan || "Digital Shepherd - Technology Trading",
-            whatsapp: data.whatsapp || "+923216916909",
+            whatsapp: data.whatsapp || "923216916909",
             phones: data.phones || ["+923216916909", "03006908486"],
             address: data.address || "M21, M22 Saeed Center, Fraid Town Road, Sahiwal",
             heroHeadline: data.hero_headline || "Modern IT & POS Solutions",
@@ -83,10 +124,11 @@ export async function getBusinessInfo(forceRefresh = false) {
             heroImage: data.hero_image_url || null,
             facebook: data.facebook || "https://www.facebook.com/profile.php?id=100076568414908",
             instagram: data.instagram || "https://www.instagram.com/official.noor.ent/",
-            logo: data.logo_url || null,
+            // Fallbacks for missing columns in schema
+            logo: data.logo_url || null, 
             primaryColor: data.primary_color || '#4f8ef7',
             secondaryColor: data.secondary_color || '#050818',
-            siteName: data.site_name || 'NOORENTERPRISES'
+            siteName: data.site_name || data.name || 'NOORENTERPRISES'
         };
 
         setStorageCache(CACHE_KEY_BUSINESS, businessInfoCache);

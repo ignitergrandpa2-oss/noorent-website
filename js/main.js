@@ -3,7 +3,8 @@ import {
     getProducts, 
     getServices, 
     getCategories, 
-    subscribeToProducts 
+    subscribeToProducts,
+    cleanWhatsApp
 } from './data.js';
 import { cart } from './cart.js';
 import { placeOrder } from './order-handler.js';
@@ -26,6 +27,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupGeneralListeners();
     setupCartUI(business);
     setupCheckoutUI(business);
+    
+    // Global Event Delegation for Checkout (Ensure Added Only Once)
+    document.addEventListener('click', (e) => {
+        if (e.target && (e.target.id === 'checkout-trigger' || e.target.closest('#checkout-trigger'))) {
+            e.preventDefault();
+            console.log("Global Checkout trigger clicked");
+            
+            // Access the modal from the global scope/DOM if needed, 
+            // but we can just find the trigger's purpose
+            const modal = document.getElementById('checkout-modal');
+            if (modal) {
+                if (cart.items.length === 0) {
+                    alert("Your cart is empty!");
+                    return;
+                }
+                document.getElementById('summary-qty').textContent = cart.getCount();
+                document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
+                modal.style.display = 'flex';
+                modal.classList.add('active');
+                document.getElementById('cart-drawer').classList.remove('active');
+            }
+        }
+    });
     
     // 3. Populate Products
     renderFeaturedProducts(products, business);
@@ -153,13 +177,18 @@ function setupCheckoutUI(business) {
             alert("Your cart is empty!");
             return;
         }
-        modal.style.display = 'flex';
+        // Ensure modal is reset and data is correct
         document.getElementById('summary-qty').textContent = cart.getCount();
         document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
+        
+        modal.style.display = 'flex';
+        // Force redraw if needed for mobile
+        modal.offsetHeight; 
+        modal.classList.add('active');
     };
 
-    trigger?.addEventListener('click', openCheckout);
-    closeBtn?.addEventListener('click', () => modal.style.display = 'none');
+    // Use static listeners for persistent elements
+    closeBtn?.addEventListener('click', () => { modal.style.display = 'none'; modal.classList.remove('active'); });
 
     methodCards.forEach(card => {
         card.addEventListener('click', () => {
@@ -317,11 +346,16 @@ function createProductCard(p, business) {
     if (directBuyBtn) {
         directBuyBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            cart.clear(); // assuming buying directly resets cart to just this item, or we can just open checkout
             cart.addItem(p);
-            document.getElementById('checkout-modal').style.display = 'flex';
-            document.getElementById('summary-qty').textContent = cart.getCount();
-            document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
+            // Open cart drawer first to show it's added, then trigger checkout
+            const drawer = document.getElementById('cart-drawer');
+            if (drawer) drawer.classList.add('active');
+            
+            // Short delay to let drawer animation start, then open checkout
+            setTimeout(() => {
+                const checkoutTrigger = document.getElementById('checkout-trigger');
+                if (checkoutTrigger) checkoutTrigger.click();
+            }, 300);
         });
     }
 
@@ -407,8 +441,13 @@ function openQuickView(p, b) {
     const waBtn = document.getElementById('qv-wa-btn');
     if (waBtn) {
         waBtn.addEventListener('click', () => {
+            const cleanNumber = cleanWhatsApp(b.whatsapp);
+            if (!cleanNumber) {
+                alert("Store WhatsApp number is not configured.");
+                return;
+            }
             const msg = `Hi there! I’m interested in your collection. Specifically, I'm looking at ${p.name}. Kindly assist me with the best options and current pricing.`;
-            const waUrl = `https://wa.me/${(b.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+            const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(msg)}`;
             window.open(waUrl, '_blank');
         });
     }

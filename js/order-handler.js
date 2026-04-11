@@ -38,9 +38,14 @@ export async function placeOrder(customerData, method = 'whatsapp') {
 
         // 3. Handle Method Specific Actions
         if (method === 'whatsapp') {
-            const businessPhone = customerData.businessWhatsapp || '923216916909';
+            const { cleanWhatsApp } = await import('./data.js');
+            const businessPhone = cleanWhatsApp(customerData.businessWhatsapp);
+            if (!businessPhone) {
+                alert("Store WhatsApp number is not configured. Please contact the administrator.");
+                return;
+            }
             const msg = cart.generateWhatsAppMessage();
-            window.open(`https://wa.me/${businessPhone.replace(/[^0-9]/g, '')}?text=${msg}`, '_blank');
+            window.open(`https://wa.me/${businessPhone}?text=${msg}`, '_blank');
         } else {
             // Direct Order - Email is sent via Supabase Webhook automatically
             // We just return success to the UI
