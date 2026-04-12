@@ -73,9 +73,13 @@ export async function getBusinessInfo(forceRefresh = false) {
     }
 
     try {
-        // 1. Fetch from settings table
-        // Note: We use available columns: id, name, slogan, whatsapp, phones, address, hero_headline, hero_subtitle, hero_image_url, facebook, instagram
-        let { data: list, error } = await supabase.from('settings').select('*').limit(1);
+        // 1. Fetch from settings table with timeout
+        const fetchPromise = supabase.from('settings').select('*').limit(1);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Settings fetch timeout")), 5000)
+        );
+
+        let { data: list, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
         // 2. Handle Empty Table (Bootstrap)
         if (!error && (!list || list.length === 0)) {
@@ -333,10 +337,16 @@ export async function getProducts(forceRefresh = false) {
     if (productsCache.length > 0 && !forceRefresh) return productsCache;
     
     try {
-        const { data, error } = await supabase
+        const fetchPromise = supabase
             .from('products')
             .select('*')
             .order('created_at', { ascending: false });
+            
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Products fetch timeout")), 8000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             
         if (error) throw error;
         const products = data.map(item => mapSupabaseProduct(item));
@@ -495,10 +505,16 @@ export async function addLead(leadData) {
  */
 export async function getOrders() {
     try {
-        const { data, error } = await supabase
+        const fetchPromise = supabase
             .from('orders')
             .select('*')
             .order('created_at', { ascending: false });
+            
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Orders fetch timeout")), 8000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             
         if (error) throw error;
         return data || [];

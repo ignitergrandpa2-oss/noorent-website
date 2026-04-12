@@ -17,6 +17,17 @@
             <p>Initializing Secure Session...</p>
         </div>
     </div>
+    <script>
+        // Emergency fallback: If the main script fails or hangs, clear overlay after 10s
+        setTimeout(() => {
+            const overlay = document.getElementById('admin-init-overlay');
+            if (overlay && overlay.style.display !== 'none') {
+                console.warn("Auth initialization taking too long, clearing overlay via fallback.");
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            }
+        }, 12000);
+    </script>
 
     <!-- Login Auth Gate -->
     <div id="login-container" class="admin-auth-container" style="display: none;">

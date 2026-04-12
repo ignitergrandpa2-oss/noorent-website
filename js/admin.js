@@ -1,3 +1,5 @@
+console.log("[Admin] Script loading...");
+
 import { supabase } from './supabase-config.js';
 import {
     getBusinessInfo,
@@ -15,7 +17,11 @@ import {
     cleanWhatsApp
 } from './data.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
+console.log("[Admin] Imports successful.");
+
+async function startAdmin() {
+    console.log("[Admin] Initializing...");
+    
     // --- Centralized App State ---
     const UI_STATES = { LOADING: 'loading', LOGIN: 'login', DASHBOARD: 'dashboard' };
     let currentUIState = UI_STATES.LOADING;
@@ -39,11 +45,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /**
      * Unified State Machine for UI
-     * Handles immediate visibility for speed and reliability
      */
     function applyUIState(state) {
         currentUIState = state;
         console.log(`[Admin] Applying State: ${state}`);
+
+        if (!initOverlay) {
+            console.warn("[Admin] Init overlay not found in DOM.");
+        }
 
         switch (state) {
             case UI_STATES.LOADING:
@@ -52,13 +61,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 adminWrapper.style.display = 'none';
                 break;
             case UI_STATES.LOGIN:
-                if (initOverlay) initOverlay.style.display = 'none';
+                if (initOverlay) {
+                    initOverlay.style.opacity = '0';
+                    setTimeout(() => initOverlay.style.display = 'none', 300);
+                }
                 loginContainer.style.display = 'flex';
                 loginContainer.style.opacity = '1';
                 adminWrapper.style.display = 'none';
                 break;
             case UI_STATES.DASHBOARD:
-                if (initOverlay) initOverlay.style.display = 'none';
+                if (initOverlay) {
+                    initOverlay.style.opacity = '0';
+                    setTimeout(() => initOverlay.style.display = 'none', 300);
+                }
                 loginContainer.style.display = 'none';
                 adminWrapper.style.display = 'flex';
                 adminWrapper.style.opacity = '1';
@@ -70,11 +85,10 @@ document.addEventListener('DOMContentLoaded', async () => {
      * The single source of truth for auth transitions
      */
     async function syncAuthState(session) {
+        console.log("[Auth] Syncing state...", session ? "Session Exists" : "No Session");
         try {
             if (session) {
-                console.log("[Auth] Session active. Resolving profile...");
-                
-                // Fetch profile with fallback
+                // Fetch profile with timeout
                 const profile = await getUserProfile(session.user);
                 currentUser = profile || {
                     id: session.user.id,
@@ -91,26 +105,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 updateRoleVisibility();
             } else {
-                console.log("[Auth] No session found.");
                 currentUser = null;
                 applyUIState(UI_STATES.LOGIN);
             }
         } catch (error) {
             console.error("[Auth] Sync failed:", error);
             applyUIState(UI_STATES.LOGIN);
-            authError.textContent = "Session conflict. Please login again.";
-            authError.style.display = 'block';
+            if (authError) {
+                authError.textContent = "Session conflict. Please login again.";
+                authError.style.display = 'block';
+            }
         }
     }
 
     // --- Bootstrapping ---
     applyUIState(UI_STATES.LOADING);
 
-    // 1. Initial Load Check
-    const { data: { session } } = await supabase.auth.getSession();
-    await syncAuthState(session);
+    try {
+        // 1. Initial Load Check (with safety timeout)
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Auth session timeout")), 8000)
+        );
 
-    // 2. Handle Subsequent State Changes (Logout/Token Expiry)
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+        await syncAuthState(session);
+    } catch (err) {
+        console.error("[Boot] Initialization failed:", err);
+        applyUIState(UI_STATES.LOGIN); // Fallback to login if auth hangs
+    }
+
+    // 2. Handle Subsequent State Changes
     supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`[Auth Event] ${event}`);
         if (event === 'SIGNED_OUT') {
@@ -1260,3 +1285,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         dlAnchorElem.click();
     });
 });
+
+// --- Bootstrapping Entry Point ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAdmin);
+} else {
+    startAdmin();
+}
