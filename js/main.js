@@ -92,9 +92,13 @@ function setupCartUI(business) {
     const continueBtn = document.getElementById('continue-shopping');
     const itemList = document.getElementById('cart-items-list');
 
+    const toggleScroll = (lock) => {
+        document.body.classList.toggle('no-scroll', lock);
+    };
+
     const toggleCart = (show) => {
         drawer.classList.toggle('active', show);
-        document.body.style.overflow = show ? 'hidden' : '';
+        toggleScroll(show);
     };
 
     trigger?.addEventListener('click', () => toggleCart(true));
@@ -181,14 +185,23 @@ function setupCheckoutUI(business) {
         document.getElementById('summary-qty').textContent = cart.getCount();
         document.getElementById('summary-total').textContent = cart.formatPrice(cart.getTotal());
         
+        // Lock scroll and open modal
+        document.body.classList.add('no-scroll');
         modal.style.display = 'flex';
         // Force redraw if needed for mobile
         modal.offsetHeight; 
         modal.classList.add('active');
+
+        // Smooth scroll to top to ensure modal (bottom sheet) is focused visually on mobile
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     // Use static listeners for persistent elements
-    closeBtn?.addEventListener('click', () => { modal.style.display = 'none'; modal.classList.remove('active'); });
+    closeBtn?.addEventListener('click', () => { 
+        modal.style.display = 'none'; 
+        modal.classList.remove('active'); 
+        document.body.classList.remove('no-scroll');
+    });
 
     methodCards.forEach(card => {
         card.addEventListener('click', () => {

@@ -8,10 +8,10 @@ export async function placeOrder(customerData, method = 'whatsapp') {
     const items = cart.items;
     const totalAmount = cart.getTotal();
     
-    // 1. Prepare Order Data
+    // 1. Prepare Order Data (Must match Supabase exactly)
     const orderData = {
-        customer_name: customerData.name,
-        customer_phone: customerData.phone,
+        customer_name: customerData.name || "Unknown",
+        customer_phone: customerData.phone || "N/A",
         customer_address: customerData.address || '',
         items: items.map(item => ({
             id: item.id,
@@ -21,42 +21,44 @@ export async function placeOrder(customerData, method = 'whatsapp') {
         })),
         total_amount: totalAmount,
         source: method,
-        status: 'pending',
-        order_number: `ORD-${Date.now().toString().slice(-6)}` // Simple fallback if trigger fails
+        status: 'pending'
     };
 
     try {
+        console.log("Submitting order payload:", orderData);
+        
         // 2. Save to Supabase (CRITICAL: Must happen before any redirect)
         const { data, error } = await supabase
             .from('orders')
-            .insert([orderData])
-            .select();
+            .insert([orderData]);
 
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Database Error:", error);
+            // Check for specific error codes if needed (e.g., 42501 is RLS violation)
+            if (error.code === '42501') {
+                throw new Error("Missing database permissions (RLS). Please contact admin.");
+            }
+            throw new Error(`Database submission failed: ${error.message}`);
+        }
         
-        const savedOrder = data[0];
-
         // 3. Handle Method Specific Actions
         if (method === 'whatsapp') {
             const { cleanWhatsApp } = await import('./data.js');
             const businessPhone = cleanWhatsApp(customerData.businessWhatsapp);
             if (!businessPhone) {
-                alert("Store WhatsApp number is not configured. Please contact the administrator.");
-                return;
+                console.warn("Business WhatsApp missing, order saved but redirect failed.");
+            } else {
+                const msg = cart.generateWhatsAppMessage();
+                window.open(`https://wa.me/${businessPhone}?text=${msg}`, '_blank');
             }
-            const msg = cart.generateWhatsAppMessage();
-            window.open(`https://wa.me/${businessPhone}?text=${msg}`, '_blank');
-        } else {
-            // Direct Order - Email is sent via Supabase Webhook automatically
-            // We just return success to the UI
         }
 
         // 4. Clear Cart on success
         cart.clear();
         
-        return savedOrder;
+        return true;
     } catch (error) {
-        console.error("Order submission failed:", error);
+        console.error("Detailed Order Submission Failure:", error);
         throw error;
     }
 }

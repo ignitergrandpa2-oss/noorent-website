@@ -18,6 +18,7 @@ import {
 document.addEventListener('DOMContentLoaded', async () => {
     let productsSubscriptionCleanup = null;
     let isInitialized = false;
+    let isInitialLoad = true; // Flag to prevent multiple triggers during load
     let currentUser = null;
     let productsList = [];
     let categoriesList = [];
@@ -94,11 +95,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 clearTimeout(safetyTimeout);
-                if (error) throw error;
+                if (error) {
+                    console.error("Supabase Auth Error:", error);
+                    throw error;
+                }
+
+                if (!data || !data.user) {
+                    throw new Error("Login failed: Invalid response from authentication server.");
+                }
 
             } catch (err) {
                 console.error("Login failed:", err.message);
-                authError.textContent = err.message;
+                authError.textContent = err.message || "An unexpected error occurred during login.";
                 authError.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Login <i class="fas fa-sign-in-alt"></i>';
