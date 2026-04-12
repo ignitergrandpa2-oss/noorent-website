@@ -16,9 +16,11 @@ import {
 } from './data.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // --- Centralized App State ---
+    const UI_STATES = { LOADING: 'loading', LOGIN: 'login', DASHBOARD: 'dashboard' };
+    let currentUIState = UI_STATES.LOADING;
     let productsSubscriptionCleanup = null;
-    let isInitialized = false;
-    let isInitialLoad = true; // Flag to prevent multiple triggers during load
+    let isDashboardInitialized = false;
     let currentUser = null;
     let productsList = [];
     let categoriesList = [];
@@ -26,6 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let productImages = [];
     let currentStep = 1;
 
+    // DOM Elements
+    const initOverlay = document.getElementById('admin-init-overlay');
     const loginContainer = document.getElementById('login-container');
     const adminWrapper = document.getElementById('admin-wrapper');
     const authForm = document.getElementById('auth-form');
@@ -33,38 +37,99 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnLogout = document.getElementById('btn-logout');
     const mobileLogout = document.getElementById('mobile-logout');
 
-    // 1. Initial State Check
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-        console.log("Initial Session Found");
-        currentUser = (await getUserProfile(session.user)) || {
-            role: 'admin',
-            display_name: (session.user.email || 'admin').split('@')[0],
-            email: session.user.email
-        };
-        showDashboard();
-        isInitialized = true;
-    } else {
-        console.log("No Initial Session");
-        showLogin();
+    /**
+     * Unified State Machine for UI
+     * Handles immediate visibility for speed and reliability
+     */
+    function applyUIState(state) {
+        currentUIState = state;
+        console.log(`[Admin] Applying State: ${state}`);
+
+        switch (state) {
+            case UI_STATES.LOADING:
+                if (initOverlay) initOverlay.style.display = 'flex';
+                loginContainer.style.display = 'none';
+                adminWrapper.style.display = 'none';
+                break;
+            case UI_STATES.LOGIN:
+                if (initOverlay) initOverlay.style.display = 'none';
+                loginContainer.style.display = 'flex';
+                loginContainer.style.opacity = '1';
+                adminWrapper.style.display = 'none';
+                break;
+            case UI_STATES.DASHBOARD:
+                if (initOverlay) initOverlay.style.display = 'none';
+                loginContainer.style.display = 'none';
+                adminWrapper.style.display = 'flex';
+                adminWrapper.style.opacity = '1';
+                break;
+        }
     }
-    isInitialLoad = false;
 
-    // Handle Subsequent State Changes
+    /**
+     * The single source of truth for auth transitions
+     */
+    async function syncAuthState(session) {
+        try {
+            if (session) {
+                console.log("[Auth] Session active. Resolving profile...");
+                
+                // Fetch profile with fallback
+                const profile = await getUserProfile(session.user);
+                currentUser = profile || {
+                    id: session.user.id,
+                    role: 'admin',
+                    display_name: (session.user.email || 'admin').split('@')[0],
+                    email: session.user.email
+                };
+
+                applyUIState(UI_STATES.DASHBOARD);
+                
+                if (!isDashboardInitialized) {
+                    await initDashboard();
+                    isDashboardInitialized = true;
+                }
+                updateRoleVisibility();
+            } else {
+                console.log("[Auth] No session found.");
+                currentUser = null;
+                applyUIState(UI_STATES.LOGIN);
+            }
+        } catch (error) {
+            console.error("[Auth] Sync failed:", error);
+            applyUIState(UI_STATES.LOGIN);
+            authError.textContent = "Session conflict. Please login again.";
+            authError.style.display = 'block';
+        }
+    }
+
+    // --- Bootstrapping ---
+    applyUIState(UI_STATES.LOADING);
+
+    // 1. Initial Load Check
+    const { data: { session } } = await supabase.auth.getSession();
+    await syncAuthState(session);
+
+    // 2. Handle Subsequent State Changes (Logout/Token Expiry)
     supabase.auth.onAuthStateChange(async (event, session) => {
-        if (isInitialLoad) return; // Prevent double-triggering during DOMContentLoaded
-
-        console.log("Auth Event:", event);
-        if (event === 'SIGNED_IN' && session) {
-            currentUser = await getUserProfile(session.user);
-            showDashboard();
-            isInitialized = true;
-        } else if (event === 'SIGNED_OUT') {
-            showLogin();
-            isInitialized = false;
+        console.log(`[Auth Event] ${event}`);
+        if (event === 'SIGNED_OUT') {
+            isDashboardInitialized = false;
+            await syncAuthState(null);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            await syncAuthState(session);
         }
     });
+
+    // Logout Handlers
+    const handleLogout = async () => {
+        if (confirm("Are you sure you want to logout?")) {
+            await supabase.auth.signOut();
+        }
+    };
+
+    if (btnLogout) btnLogout.addEventListener('click', handleLogout);
+    if (mobileLogout) mobileLogout.addEventListener('click', handleLogout);
 
     // --- Login Form Handler ---
     if (authForm) {
@@ -116,31 +181,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
-    function showDashboard() {
-        loginContainer.style.opacity = '0';
-        setTimeout(() => {
-            loginContainer.style.display = 'none';
-            adminWrapper.style.display = 'flex';
-            adminWrapper.style.opacity = '0';
-            setTimeout(() => {
-                adminWrapper.style.opacity = '1';
-                updateRoleVisibility();
-                initDashboard();
-            }, 50);
-        }, 500);
-    }
+    async function initDashboard() {
+        try {
+            console.log("[Dashboard] Initializing data layers...");
+            updateRoleVisibility();
+            
+            // Parallel fetch for speed
+            const [business, prods, cats, orders] = await Promise.all([
+                getBusinessInfo(),
+                getProducts(),
+                getCategories(),
+                getOrders()
+            ]);
 
-    function showLogin() {
-        if (adminWrapper.style.display !== 'none') {
-            adminWrapper.style.opacity = '0';
-            setTimeout(() => {
-                adminWrapper.style.display = 'none';
-                loginContainer.style.display = 'flex';
-                setTimeout(() => { loginContainer.style.opacity = '1'; }, 50);
-            }, 500);
-        } else {
-            loginContainer.style.display = 'flex';
-            loginContainer.style.opacity = '1';
+            productsList = prods;
+            categoriesList = cats;
+
+            // Initialize UI components
+            renderStats(prods, orders);
+            renderProducts(prods);
+            renderCategories(cats);
+            renderOrders(orders);
+            fillSettingsForm(business);
+            
+            console.log("[Dashboard] Initialization complete.");
+        } catch (error) {
+            console.error("[Dashboard] Initialization failed:", error);
+            showToast("Warning: Some data failed to load. Check your connection.", true);
         }
     }
 

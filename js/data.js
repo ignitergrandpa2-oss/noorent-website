@@ -106,7 +106,7 @@ export async function getBusinessInfo(forceRefresh = false) {
         }
 
         if (error || !list || list.length === 0) {
-            console.warn("Supabase fetch failed, using defaults.");
+            console.warn("[Data] Supabase fetch failed or empty, using defaults.");
             businessInfoCache = getDefaultBusinessInfo();
             return businessInfoCache;
         }
